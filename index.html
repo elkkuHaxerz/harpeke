@@ -544,7 +544,7 @@ H371 Palo-/tähystyslento
 var tasks=[];
 var rowsEl=document.getElementById("rows");
 function pad(n){return (n<10?"0":"")+n}
-function stat(t){var s=(Date.now()-t.at)/1000;return s<60?"KE!":(s<300?"KE":"SU")}
+function stat(t){return t.st||"KE!"}
 var selId=null,LPBTN={};
 function moveSel(dir){
   var vis=tasks.filter(function(t){return !t.hidden}),i=-1;
@@ -635,6 +635,8 @@ LPB.forEach(function(a){
   b.style.top=a[3]+'px';b.style[a[1]==='l'?'left':'right']=a[2]+'px';b.style.width=a[4]+'px';b.style.height=a[5]+'px';b.disabled=!a[6];
   if(a[0]==='Reitti')b.onclick=function(){var s=curSel();if(!s)return;var d=s.lat!=null?s.lat+','+s.lon:[s.osoite,s.kunta].join(', ');var l=document.createElement('a');l.href='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(d)+'&travelmode=driving';l.target='_blank';l.rel='noopener';document.body.appendChild(l);l.click();l.remove()};
   if(a[0]==='Sulje')b.onclick=function(){showView(0)};
+  var STMAP={'JONO':'JO','KESK':'KE','SUOR':'SU'};
+  if(STMAP[a[0]])b.onclick=function(){var s=curSel();if(s){s.st=STMAP[a[0]];renderTasks()}};
   if(a[0]==='Keskitä')b.onclick=function(){var s=curSel();if(s&&s.lat!=null){showView(0);map.setView([s.lat,s.lon],16)}};
   if(a[0]==='Piilota<br>tehtävä')b.onclick=function(){var s=curSel();if(s){s.hidden=true;selId=null;renderTasks()}};
   if(a[0]==='Näytä<br>kaikki')b.onclick=function(){tasks.forEach(function(t){t.hidden=false});renderTasks()};
@@ -692,7 +694,7 @@ ge('tgg').onclick=function(e){var b=e.target.closest('.tc');if(!b)return;tgSel=t
 ge('tg_get').onclick=function(){tgInfo=true;tgNote='';tgRender(true)};
 ge('tg_loc').onclick=function(){tgInfo=true;tgNote='Yksikön sijaintitietoa ei ole saatavilla.';tgRender(true)};
 ge('tg_n').onclick=function(){tgSort='n';tgRender(true)};
-ge('tg_s').onclick=function(){tgSort='s';tgRender(true)};
+ge('tg_s').onclick=function(){tgSort=tgSort==='s'?'n':'s';tgRender(true)};
 ge('tg_h').onclick=function(){if(tgSel){tgHid[tgSel]=1;tgSel=null;tgInfo=false}else tgHid={};tgRender(true)};
 ge('tg_x').onclick=function(){showView(0)};
 setInterval(function(){if(curView===7)tgRender(false)},1000);
