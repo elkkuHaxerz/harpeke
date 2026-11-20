@@ -979,7 +979,6 @@ lu.focus();
   }
   function tog(key,id){document.getElementById(id).onclick=function(){
     S[key]=S[key]?0:1;save();paint();
-    if(key==='virve'&&S.virve)window.virvePlay(); // kuuntele heti kun laitat päälle
     if(key==='virve'&&!S.virve)window.virveStop();
     if(key==='wake')wake();
   }}
