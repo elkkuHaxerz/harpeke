@@ -269,6 +269,7 @@ nav button:nth-child(n+5){border-bottom:0}
 #stg .st.on{background:#2a5be0;color:#fff;border-color:#8fb0ff #0d2f8f #0d2f8f #8fb0ff}
 #stg .st:active{border-color:#8c8c8c #fff #fff #8c8c8c}
 #stg .st.on:active{border-color:#0d2f8f #8fb0ff #8fb0ff #0d2f8f}
+#stg .mt{display:none;flex-direction:column;gap:8px;background:#fff;border:1px solid #9a9ea8;padding:10px 12px}#stg .mt.open{display:flex}#stg .mt label{font:bold 14px Arial,Helvetica,sans-serif}#stg .mt input,#stg .mt select{box-sizing:border-box;width:100%;font:16px Arial,Helvetica,sans-serif;padding:8px;border:1px solid #8c8c8c;background:#fff;color:#000}#stg .mt button{min-height:48px;font:bold 17px Arial,Helvetica,sans-serif;background:#5fbf4f;color:#000;border:2px solid;border-color:#fff #8c8c8c #8c8c8c #fff;cursor:pointer}#stg .mt .mm{font:bold 14px Arial,Helvetica,sans-serif;min-height:18px}
 #stg .info{font-size:15px;line-height:1.5;border:1px solid #9a9ea8;background:#fff;padding:10px 12px}
 #stg .info div{display:flex;gap:10px}
 #stg .info div span:first-child{flex:none;width:90px;color:#444}
@@ -327,6 +328,9 @@ nav button:nth-child(n+5){border-bottom:0}
 <button class="st" id="s_virve"><span><b>Virve-ääni</b> <span id="s_virve_v">POIS</span></span><small>Soittaa Virve-äänen 5 sekunnin ajan, kun omalle yksikölle tulee uusi tehtävä.</small></button>
 <button class="st" id="s_blink"><span><b>F2-vilkku</b> <span id="s_blink_v">PÄÄLLÄ</span></span><small>F2 Tehtävät -nappi vilkkuu punaisena, kun uusi tehtävä saapuu.</small></button>
 <button class="st" id="s_wake"><span><b>Näyttö pysyy päällä</b> <span id="s_wake_v">POIS</span></span><small>Estää laitteen näyttöä sammumasta, kun HARPEKE on auki.</small></button>
+<div class="sg">Omat tehtävät</div>
+<button class="st" id="s_mytask"><span><b>Luo tehtävä omalle yksikölle</b></span><small>Luo harjoitustehtävän, joka tulee vain omalle yksikölle.</small></button>
+<div class="mt" id="s_mtf"><label>Tehtäväkoodi</label><select id="mt_code"></select><label>Kiireellisyys</label><select id="mt_urg"><option>A</option><option>B</option><option selected>C</option><option>D</option></select><label>Kunta</label><input id="mt_kunta" value="Vantaa" autocomplete="off"><label>Osoite</label><input id="mt_osoite" placeholder="esim. Maalinauhantie 0" autocomplete="off"><label>Lisätiedot</label><input id="mt_info" autocomplete="off"><button id="mt_go">Luo tehtävä</button><div class="mm" id="mt_msg"></div></div>
 <div class="sg">Testaus</div>
 <button class="st" id="s_test"><span><b>Testaa Virve-ääni</b></span><small>Soittaa äänen 5 sekuntia. Painamalla uudelleen ääni loppuu heti.</small></button>
 <div class="sg">Tietoja järjestelmästä</div>
@@ -778,12 +782,19 @@ setInterval(unitBeat,15000);
 setInterval(function(){
   if(!curUnit)return;
   var s=stLoad(),now=Date.now();
+  var fresh=[];
   s.tasks.forEach(function(t){
     if(t.at<=now&&t.ul.indexOf(curUnit)>=0&&!tasks.some(function(x){return x.id===t.id})){
       var c={};for(var k in t)c[k]=t[k];tasks.unshift(c);
-      newTaskAlert();
+      // Hälytys vain ensimmäisellä kerralla, ei uudelleenkirjautuessa
+      if(!t.seen||t.seen.indexOf(curUnit)<0)fresh.push(t.id);
     }
   });
+  if(fresh.length){
+    var me=curUnit;
+    stMut(function(st){st.tasks.forEach(function(t){if(fresh.indexOf(t.id)>=0){t.seen=t.seen||[];if(t.seen.indexOf(me)<0)t.seen.push(me)}})});
+    newTaskAlert();
+  }
   tasks=tasks.filter(function(x){return !x.sh||s.tasks.some(function(y){return y.id===x.id})});
 },1000);
 // Ylläpitopaneeli
@@ -984,6 +995,20 @@ lu.focus();
   }}
   tog('virve','s_virve');tog('blink','s_blink');tog('wake','s_wake');
   document.getElementById('s_test').onclick=function(){if(stopT)window.virveStop();else window.virvePlay()};
+  // Oma tehtävä omalle yksikölle
+  (function(){
+    var f=document.getElementById('s_mtf'),sel=document.getElementById('mt_code'),msg=document.getElementById('mt_msg');
+    CODES.forEach(function(c,i){var o=document.createElement('option');o.value=i;o.textContent=c[0]+' – '+c[1];sel.appendChild(o)});
+    function say(t,ok){msg.textContent=t;msg.style.color=ok?'#2a7a1f':'#c00000'}
+    document.getElementById('s_mytask').onclick=function(){f.classList.toggle('open');say('',1)};
+    document.getElementById('mt_go').onclick=function(){
+      if(!curUnit){say('Kirjaudu ensin yksikölle.',0);return}
+      var d=new Date(),c=CODES[sel.value];
+      var t={id:d.getTime()+'_'+Math.random().toString(36).slice(2),at:d.getTime(),code:c[0],urg:document.getElementById('mt_urg').value,time:pad(d.getHours())+':'+pad(d.getMinutes()),ul:[curUnit],units:curUnit,kunta:document.getElementById('mt_kunta').value,osoite:document.getElementById('mt_osoite').value,info:document.getElementById('mt_info').value,sh:1};
+      stMut(function(s){s.tasks.unshift(t)}); // tulee yksikölle samaa reittiä kuin muut tehtävät
+      say('Tehtävä luotu yksikölle '+curUnit+'.',1);
+    };
+  })();
   function openS(){
     document.getElementById('fm').style.display='none';
     document.getElementById('s_unit').textContent=(typeof curUnit!=='undefined'&&curUnit)?curUnit:'-';
