@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HARPEKE</title>
+<style>
+/* Leaflet-perus-CSS sisäistettynä */
+.leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer,.leaflet-layer{position:absolute;left:0;top:0}
+.leaflet-container{overflow:hidden;position:relative;touch-action:none;-webkit-tap-highlight-color:transparent}
+.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow{user-select:none;-webkit-user-drag:none}
+.leaflet-tile{visibility:hidden}
+.leaflet-tile-loaded{visibility:inherit}
+.leaflet-zoom-animated{transform-origin:0 0}
+.leaflet-zoom-anim .leaflet-zoom-animated{transition:transform .25s cubic-bezier(0,0,.25,1)}
+.leaflet-zoom-anim .leaflet-tile,.leaflet-pan-anim .leaflet-tile{transition:none}
+.leaflet-pane{z-index:400}.leaflet-tile-pane{z-index:200}.leaflet-overlay-pane{z-index:400}
+.leaflet-map-pane canvas{z-index:100}.leaflet-map-pane svg{z-index:200}
+.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}
+.leaflet-top{top:0}.leaflet-right{right:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}
+.leaflet-control{position:relative;z-index:800;pointer-events:auto;float:left;clear:both}
+.leaflet-right .leaflet-control{float:right}
+.leaflet-control-attribution{background:rgba(255,255,255,.8);padding:0 5px;font-size:11px;color:#333}
+
+:root{--bg:#fff;--text:#14181f;--nav-w:146px;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1318;--text:#e8ebef}}
+:root[data-theme="dark"]{--bg:#0f1318;--text:#e8ebef}
+html,body{height:100%;margin:0}
+body{background:#000;color:var(--text);font:14px system-ui,sans-serif;display:flex;justify-content:center;align-items:stretch;box-sizing:border-box}
+/* Koko ohjelma kavennettu: 8 nappia x 146 px */
+#app{position:relative;width:min(100vw,calc(var(--nav-w) * 8));height:100%;display:flex;flex-direction:column;background:var(--bg);overflow:hidden}
+nav{flex:none;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));border-bottom:1px solid #000;background:#b4b7be}
+nav button{font:inherit;color:#000;background:#d2d5da;border:0;border-right:2px solid #000;height:72px;padding:0 6px;cursor:pointer;display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:0}
+nav button:last-child{border-right:0}
+nav button strong{display:block;font-size:17px}
+nav button span{display:block;font-size:20px;font-weight:bold;margin-top:6px}
+nav button:hover{background:rgba(128,128,128,.15)}
+nav button.on{background:#f4ea2e}
+@keyframes blinkred{0%,100%{background:#d2d5da;color:#000}50%{background:#f0502d;color:#000}}
+nav button.alert{animation:blinkred 1s steps(1) infinite}
+nav button:nth-child(3){background:var(--st,#d2d5da);color:var(--st-text,#000)}
+nav button:nth-child(3)[style*="--st"] strong,nav button:nth-child(3)[style*="--st"] span{font-weight:700}
+nav button:nth-child(3):hover{filter:brightness(.92)}
+nav button:nth-child(3).on{filter:brightness(.8)}
+@media (max-width:960px){
+nav{grid-template-columns:repeat(4,minmax(0,1fr))}
+nav button{border-bottom:2px solid #000}
+nav button:nth-child(4n){border-right:0}
+nav button:nth-child(n+5){border-bottom:0}
+}
+#quit{position:absolute;inset:0;z-index:1200;display:none;align-items:center;justify-content:center}
+#quit .qd{position:relative;width:min(635px,94%);height:325px;background:#dfe2ec;border:1px solid #aab;font-family:Arial,Helvetica,sans-serif;color:#000}
+#quit .qt{position:absolute;left:0;right:0;top:120px;text-align:center;font-size:21px}
+#quit .qb{position:absolute;top:245px;width:170px;height:48px;box-sizing:border-box;background:#e6e6e6;border:2px solid #a9a9a9;border-top-color:#f7f7f7;border-left-color:#f7f7f7;font:21px Arial,Helvetica,sans-serif;color:#000;cursor:pointer;padding:0}
+#closed{position:fixed;inset:0;background:#000;z-index:20000;display:none}
+#mapui{position:absolute;left:0;right:0;bottom:0;top:72px;pointer-events:none;z-index:1000;font-family:Arial,Helvetica,sans-serif}
+#mapui>*{pointer-events:auto}
+#mapui>#sb{pointer-events:none}
+#zoom{position:absolute;right:0;bottom:24px;width:150px;border:1px solid #000;background:#f4f4f0}
+#zoom button{display:block;width:100%;height:62px;border:0;border-bottom:1px solid #000;background:#fbfbf7;font:36px/1 Arial,Helvetica,sans-serif;font-weight:300;color:#000;cursor:pointer;padding:0}
+#zoom button:hover{background:#ececec}
+#zoom .info{height:62px;box-sizing:border-box;padding:6px 8px 0;text-align:center;font-size:13px;font-weight:bold;color:#000;background:#f1f1f5;border-bottom:1px solid #777;position:relative;line-height:15px}
+#zoom .bar{position:absolute;left:50%;transform:translateX(-50%);bottom:8px;height:7px;box-sizing:border-box;border:2px solid #000;border-top:0}
+#zoom button.empty{background:#e4e5ea;border-bottom:0;cursor:default}
+#sb{position:absolute;left:0;right:0;bottom:0;height:24px;display:flex;align-items:center;justify-content:flex-end}
+#sb .addr{position:absolute;left:44%;font-size:13px;font-weight:bold;color:#000;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;white-space:nowrap}
+#sb .chip{height:22px;display:flex;align-items:center;padding:0 10px;font-size:13px;border:1px solid #444;color:#000;box-sizing:border-box;margin-bottom:1px;white-space:nowrap}
+#fm{position:absolute;left:0;bottom:0;z-index:1100;display:none;grid-template-columns:repeat(2,min(160px,50vw));grid-template-rows:repeat(10,var(--rh));--rh:min(68px,calc((100vh - 90px)/10))}
+#fm button,#fm i{box-sizing:border-box;border:1px solid #8a8c96;background:#e0e1e8;font:inherit;font-size:20px;font-weight:600;color:#000;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 6px;cursor:pointer;line-height:1.15}
+#fm button{grid-column:1}
+#fm i{grid-column:2;grid-row:10;cursor:default}
+#fm4{position:absolute;left:0;bottom:0;z-index:1100;display:none;grid-template-columns:repeat(2,min(160px,50vw));grid-template-rows:repeat(11,var(--rh));--rh:min(62px,calc((100vh - 90px)/11))}
+#fm4 button,#fm4 i{box-sizing:border-box;border:1px solid #8a8c96;background:#e0e1e8;font:inherit;font-size:19px;font-weight:600;color:#000;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 6px;cursor:pointer;line-height:1.15}
+#fm4 button{grid-column:1}
+#fm4 i{grid-column:2;grid-row:11;cursor:default}
+#corner{position:absolute;left:0;bottom:0;z-index:1050;width:min(160px,50vw);height:72px;box-sizing:border-box;border:1px solid #8a8c96;background:#e0e1e8;cursor:pointer;padding:0}
+#corner:hover{filter:brightness(.94)}
+#sys{position:absolute;left:0;bottom:0;z-index:1100;display:none;grid-template-columns:repeat(2,min(160px,50vw));grid-template-rows:repeat(6,72px)}
+#sys button,#sys i{box-sizing:border-box;border:1px solid #8a8c96;background:#e0e1e8;font:inherit;font-size:19px;font-weight:600;color:#000;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 6px;cursor:pointer;line-height:1.15}
+#sys button{grid-column:1}
+#sys button:disabled{color:#8f9cc4;cursor:default}
+#sys i{grid-column:2;grid-row:6;cursor:default}
+#status{position:absolute;left:0;bottom:0;z-index:1100;display:none;grid-template-columns:repeat(2,min(160px,50vw));border:1px solid #8a8c96;background:#8a8c96;gap:2px;--rh:min(100px,calc((100vh - 72px)/7))}
+#status button{font:inherit;color:#000;border:0;height:var(--rh,100px);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 6px}
+#status button span{font-size:20px;font-weight:bold}
+#status button:hover{filter:brightness(.92)}
+#login{position:fixed;inset:0;z-index:9999;background:#000;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#000}
+#login .stage{position:absolute;left:50%;top:50%;width:965px;height:712px;background:#2d5ae6;transform-origin:center;transform:translate(-50%,-50%) scale(var(--s,1))}
+#login .dlg{position:absolute;left:120px;top:0;width:735px;height:372px;background:#e8e8e8;font-size:17px}
+#login .t1{position:absolute;left:0;right:0;top:6px;text-align:center;line-height:20px}
+#login .ver{position:absolute;right:70px;top:6px;line-height:20px}
+#login .t2{position:absolute;left:0;right:0;top:39px;text-align:center;line-height:20px}
+#login .t3{position:absolute;left:0;right:0;top:333px;text-align:center;line-height:20px}
+#login .lb{position:absolute;left:62px;line-height:20px}
+#login input{position:absolute;left:259px;width:406px;height:38px;box-sizing:border-box;border:1px solid #cfcfcf;background:#f3f3f3;font:17px Arial,Helvetica,sans-serif;padding:0 8px;color:#000;outline:0}
+#login .b{position:absolute;top:276px;width:137px;height:43px;box-sizing:border-box;background:#e6e6e6;border:2px solid #a9a9a9;border-top-color:#f7f7f7;border-left-color:#f7f7f7;font:17px Arial,Helvetica,sans-serif;color:#000;cursor:pointer;padding:0}
+#login .b:disabled{color:#8e8e8e;cursor:default}
+#login .kb{position:absolute;left:15px;top:348px;width:938px;height:297px;display:grid;grid-template-columns:repeat(13,1fr);grid-template-rows:repeat(4,1fr);background:#2d5ae6}
+#login .k{box-sizing:border-box;margin:0;padding:0;border:1px solid #8f8f8f;border-radius:0;background:#f4f4f4;font:40px Arial,Helvetica,sans-serif;color:#111;display:flex;align-items:center;justify-content:center;cursor:pointer}
+#login .k:active{background:#d6d6d6}
+#login .k.s{font-size:13px}
+#login .k.on{background:#cfd3d8}
+#ctrl{display:none!important;position:fixed;top:0;right:0;bottom:0;width:260px;box-sizing:border-box;padding:calc(12px + env(safe-area-inset-top,0px)) 14px calc(12px + env(safe-area-inset-bottom,0px));background:#0a0c10;color:#e8ebef;border-left:1px solid #2a2f38;overflow:auto}
+#ctrl h2{margin:0 0 4px;font-size:17px}
+#ctrl h3{margin:16px 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#9aa3b0}
+#ctrl .row{display:flex;flex-wrap:wrap;gap:6px}
+#ctrl button{font:inherit;font-weight:bold;color:#000;background:#c6c9ce;border:0;border-radius:4px;padding:8px 10px;cursor:pointer;flex:1 1 auto}
+#ctrl button:hover{filter:brightness(.9)}
+#ctrl select,#ctrl input{font:inherit;width:100%;box-sizing:border-box;padding:7px;border-radius:4px;border:1px solid #444;background:#14181f;color:#e8ebef}
+@media (max-width:800px){body{padding-right:0}#app{width:100vw}#ctrl{display:none}}
+#tasks{display:none;flex:1;min-height:0;flex-direction:column;overflow:auto}
+#tasks .tr{flex:none;display:grid;grid-template-columns:70fr 63fr 56fr 140fr 93fr 137fr 388fr;min-width:900px;height:31px;background:transparent;color:#000;border-bottom:0;font-family:Arial,Helvetica,sans-serif}
+#tasks .tr span{display:flex;align-items:center;padding:0 6px;overflow:hidden;white-space:nowrap;min-width:0;font-size:19px;font-weight:400;border-right:0}
+#tasks .tr span:first-child{padding-left:20px}
+#tasks .tr span:last-child{border-right:0}
+#tasks .strip{flex:none;height:18px;min-width:900px;background:linear-gradient(to right,#0b2a86,#a8cdf0);display:flex;align-items:center;justify-content:space-between;padding:0 3px;color:#fff;font-size:12px;font-weight:bold;box-sizing:border-box}
+#tasks .strip .ic{display:inline-block;width:11px;height:11px;border-radius:50%;background:#cfe0ff;border:1px solid #fff;vertical-align:-2px;margin-right:5px}
+#tasks .strip .wb b{display:inline-block;width:16px;height:14px;background:#d4d0c8;color:#000;font-size:11px;line-height:12px;text-align:center;margin-left:2px;border:1px solid;border-color:#fff #404040 #404040 #fff}
+#tasks .lw{flex:1 1 0;min-height:150px;min-width:900px;display:flex;flex-direction:column;background:#fafafa;overflow:hidden}
+#tasks #rows{flex:1;overflow-y:auto}
+#tasks .hs{flex:none;min-width:900px;height:17px;display:flex;justify-content:space-between;align-items:center;background:#e2e2e2;border-top:1px solid #888;border-bottom:1px solid #888;font-size:10px;color:#222;padding:0 4px;box-sizing:border-box}
+#tasks .lp{flex:none;position:relative;min-width:900px;height:430px;background:#dde0ec}
+#tasks .cr{position:absolute;left:179px;right:310px;top:12px;height:325px;background:#f6f8f2;box-sizing:border-box;padding:8px 12px;overflow:hidden;white-space:pre-wrap;font:19px/1.3 Arial,Helvetica,sans-serif;color:#000}
+#tasks .tr{cursor:pointer}
+#tasks .tr.sel{background:#2f3f9f;color:#fff;font-weight:700}
+#tasks .pb{position:absolute;box-sizing:border-box;padding:0 4px;background:#e9e9ea;border:2px solid;border-color:#fff #8c8c8c #8c8c8c #fff;font:19px Arial,Helvetica,sans-serif;font-weight:600;color:#000;cursor:pointer;line-height:1.15;display:flex;align-items:center;justify-content:center;text-align:center}
+#tasks .pb:disabled{color:#8f97ad;cursor:default}
+#tasks .pb.sm{font-size:13px;font-weight:400}
+#tasks .pb.xs{font-size:12px;font-weight:400;text-align:left;justify-content:flex-start;padding:0 12px}
+#tasks .pb:not(:disabled):active{border-color:#8c8c8c #fff #fff #8c8c8c}
+#tasks .th{flex:none;display:grid;grid-template-columns:70fr 63fr 56fr 140fr 93fr 137fr 388fr;min-width:900px;background:#d6d6da;border-bottom:1px solid #777;font-family:Arial,Helvetica,sans-serif}
+#tasks .th span{font-size:19px;font-weight:400;color:#000;height:32px;display:flex;align-items:center;justify-content:flex-start;padding:0 6px;border-right:1px solid #808080;box-shadow:inset 1px 1px #fff,inset -1px -1px #8a8c94;min-width:0}
+#tasks .th span:first-child{padding-left:20px}
+#tasks .th span:last-child{border-right:0}
+#map{flex:1;min-height:0;width:100%}
+#tg{display:none;flex:1;min-height:0;flex-direction:column;background:#dde0ec;font-family:Arial,Helvetica,sans-serif;color:#000;overflow:auto}
+#tg .strip{flex:none;height:18px;background:linear-gradient(to right,#0b2a86,#a8cdf0);color:#fff;font-size:12px;font-weight:bold;display:flex;align-items:center;padding:0 5px}
+#tg .tb{flex:1;min-height:0;display:grid;grid-template-columns:150px minmax(0,1fr) 170px;gap:0 10px;padding:8px 8px 0}
+#tg .tl,#tg .tr2{display:flex;flex-direction:column;font-size:16px;color:#333;min-height:0}
+#tg .tl{justify-content:space-between;padding:20px 0 12px}
+#tg .role{font-size:16px;margin:0 0 4px 2px;color:#222}
+#tg .gr{display:grid;grid-template-columns:repeat(auto-fill,minmax(124px,1fr));align-content:start;min-height:130px;max-height:calc(100vh - 340px);overflow:auto;border:1px solid #7b7f88;background:#f6f8f2}
+#tg .tc{height:54px;border:0;padding:0 4px;background:#fafafa;color:#666;font:16px/1.15 Arial,Helvetica,sans-serif;box-shadow:inset 0 0 0 1px #b4b6bc;cursor:pointer}
+#tg .tc.sel{box-shadow:inset 0 0 0 4px #000}
+#tg .ir{display:grid;grid-template-columns:150px minmax(0,1fr);gap:0 10px;margin-top:12px}
+#tg .il{display:flex;flex-direction:column;gap:12px;font-size:16px;color:#333}
+#tg .ib{min-height:150px;padding:8px 12px;border:1px solid #7b7f88;background:#f6f8f2;white-space:pre-wrap;font-size:17px;line-height:1.35;overflow:auto}
+#tg .tr2 .bx{flex:1;min-height:120px;margin:4px 0 10px;border:1px solid #7b7f88;background:#e6e8ee}
+#tg .bb{flex:none;display:flex;flex-wrap:wrap;gap:10px;padding:12px 8px 10px}
+#tg .bb button{flex:1 1 110px}
+#tg button.pb2{box-sizing:border-box;min-height:46px;padding:0 6px;background:#e9e9ea;border:2px solid;border-color:#fff #8c8c8c #8c8c8c #fff;font:16px/1.15 Arial,Helvetica,sans-serif;color:#000;cursor:pointer}
+#tg .bb button{min-height:56px}
+#tg button.pb2:disabled{color:#8f97ad;cursor:default}
+#tg button.pb2:not(:disabled):active,#tg button.pb2.on{border-color:#8c8c8c #fff #fff #8c8c8c;background:#dcdcde}
+@media(max-width:800px){#tg .tb{grid-template-columns:minmax(0,1fr)}#tg .tl,#tg .tr2{display:none}#tg .ir{grid-template-columns:110px minmax(0,1fr)}}
+#msgs{display:none;flex:1;min-height:0;background:#dde0ec;grid-template-columns:166px minmax(0,1fr) 166px;font-family:Arial,Helvetica,sans-serif;color:#000}
+#msgs .mc{padding:8px 4px 0;display:flex;flex-direction:column;gap:10px}
+#msgs .mb{box-sizing:border-box;height:69px;flex:none;background:#e9e9ea;border:2px solid;border-color:#fff #8c8c8c #8c8c8c #fff;font:600 19px Arial,Helvetica,sans-serif;color:#000;cursor:pointer;padding:0 4px;line-height:1.15}
+#msgs .mb:disabled{color:#8f97ad;cursor:default}
+#msgs .mb:not(:disabled):active,#msgs .mb.on{border-color:#8c8c8c #fff #fff #8c8c8c;background:#dcdcde}
+#msgs .mm{display:flex;flex-direction:column;min-width:0;margin:4px 0 8px;border:1px solid #7b7f88;background:#f6f8f2}
+#msgs .mh{flex:none;display:grid;grid-template-columns:130px 139px minmax(0,1fr) 34px;height:28px;background:#dcdde3;border-bottom:1px solid #888}
+#msgs .mh span{display:flex;align-items:center;padding:0 6px;font-size:19px;border-right:1px solid #808080;box-shadow:inset 1px 1px #fff,inset -1px -1px #8a8c94;min-width:0}
+#msgs .ml{flex:1;overflow:auto}
+#blogs{display:none;flex:1;min-height:0;background:#dde0ec;grid-template-columns:166px minmax(0,1fr) 166px;font-family:Arial,Helvetica,sans-serif;color:#000}
+#blogs .mc{padding:8px 4px 0;display:flex;flex-direction:column;gap:10px}
+#blogs .mb{box-sizing:border-box;height:69px;flex:none;background:#e9e9ea;border:2px solid;border-color:#fff #8c8c8c #8c8c8c #fff;font:600 19px Arial,Helvetica,sans-serif;color:#000;cursor:pointer;padding:0 4px;line-height:1.15}
+#blogs .mb:disabled{color:#8f97ad;cursor:default}
+#blogs .mb.sm{font-size:16px;font-weight:400;text-align:left;padding:0 10px}
+#blogs .mb:not(:disabled):active{border-color:#8c8c8c #fff #fff #8c8c8c;background:#dcdcde}
+#blogs .mm{display:flex;flex-direction:column;min-width:0;margin:4px 0 8px;border:1px solid #7b7f88;background:#f6f8f2}
+#blogs .mh{flex:none;display:grid;grid-template-columns:40px 158px 88px 48px minmax(0,1fr);height:28px;background:#dcdde3;border-bottom:1px solid #888}
+#blogs .mh span{display:flex;align-items:center;padding:0 6px;font-size:19px;border-right:1px solid #808080;box-shadow:inset 1px 1px #fff,inset -1px -1px #8a8c94;min-width:0}
+#blogs .ml{flex:1;overflow:auto}
+#qs{display:none;flex:1;min-height:0;flex-direction:column;background:#dde0ec;font-family:Arial,Helvetica,sans-serif;color:#000}
+#qs .qm{flex:1;min-height:0;display:grid;grid-template-columns:295px minmax(0,1fr) 110px;grid-template-rows:67px minmax(0,1fr) 66px;gap:10px 12px;padding:10px 12px 8px}
+#qs .qw{background:#f6f8f2;border:1px solid #7b7f88;min-width:0}
+#qs .qt{grid-column:2/4;display:flex;gap:4px}
+#qs .qr{display:flex;flex-direction:column;gap:2px;min-height:0}
+#qs .qr button{flex:1;min-height:0}
+#qs .qbm{grid-column:1/4;display:flex;gap:12px}
+#qs button{box-sizing:border-box;background:#e9e9ea;border:2px solid;border-color:#fff #8c8c8c #8c8c8c #fff;font:13px Arial,Helvetica,sans-serif;color:#000;cursor:pointer;padding:0 4px;line-height:1.15;display:flex;align-items:center;justify-content:center;text-align:center}
+#qs .qt button,#qs .qbm button{flex:1}
+#qs .qbm button.ar{flex:none;width:62px}
+#qs button:disabled{color:#8f97ad;cursor:default}
+#qs button:not(:disabled):active{border-color:#8c8c8c #fff #fff #8c8c8c}
+#qs .qbar{flex:none;height:44px;position:relative;background:#e8eadf;border-top:1px solid #999;display:flex;align-items:flex-end;justify-content:flex-end}
+#qs .qbar .addr{position:absolute;left:44%;top:12px;font-size:13px;font-weight:bold}
+#qs .qbar .chip{height:22px;display:flex;align-items:center;padding:0 10px;font-size:13px;border:1px solid #444;box-sizing:border-box;white-space:nowrap}
+#adm{--bg:#fbf8ff;--sf:#f1f0f9;--sf2:#e5e4ee;--on:#1b1b21;--onv:#46464f;--pr:#4256b8;--onpr:#fff;--prc:#dde1ff;--onprc:#00105c;--ol:#777680;--olv:#c7c5d0;--er:#ba1a1a;--erc:#ffdad6;--inv:#303036;--invon:#f2eff7;position:fixed;inset:0;z-index:9000;display:none;flex-direction:column;background:var(--bg);color:var(--on);font:400 15px/1.45 "Google Sans Text","Google Sans",Roboto,"Segoe UI",system-ui,sans-serif;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){#adm{--bg:#121318;--sf:#1e1f25;--sf2:#2f3036;--on:#e4e1e9;--onv:#c7c5d0;--pr:#b9c3ff;--onpr:#112688;--prc:#2c3e9f;--onprc:#dde1ff;--ol:#918f9a;--olv:#46464f;--er:#ffb4ab;--erc:#93000a;--inv:#e4e1e9;--invon:#303036}}
+#adm *{box-sizing:border-box}
+#adm header{flex:none;display:flex;align-items:center;gap:8px;padding:12px 8px 8px 24px}
+#adm header b{margin-right:auto;font-size:22px;font-weight:500}
+#adm button{font:inherit;font-weight:500;letter-spacing:.1px;border:0;border-radius:20px;height:40px;padding:0 24px;background:var(--sf2);color:var(--on);cursor:pointer;transition:box-shadow .15s}
+#adm button:hover{box-shadow:inset 0 0 0 99px color-mix(in srgb,currentColor 8%,transparent)}
+#adm button:active{box-shadow:inset 0 0 0 99px color-mix(in srgb,currentColor 14%,transparent)}
+#adm button:focus-visible,#adm a:focus-visible{outline:3px solid var(--pr);outline-offset:2px}
+#adm .pr{background:var(--pr);color:var(--onpr)}
+#adm .dg{background:var(--erc);color:var(--er)}
+#adm #at_out{width:48px;height:48px;padding:0;display:grid;place-items:center;background:transparent;border-radius:50%}
+#adm .shell{flex:1;min-height:0;display:flex;flex-direction:column}
+#adm nav{order:2;flex:none;display:flex;justify-content:space-around;gap:4px;padding:12px 8px 14px;background:var(--sf)}
+#adm nav button{flex:1;max-width:120px;height:auto;display:flex;flex-direction:column;align-items:center;gap:4px;padding:0;background:none;font-size:12px;color:var(--onv);border-radius:16px}
+#adm nav button svg{width:64px;height:32px;padding:4px 20px;border-radius:16px;fill:currentColor;transition:background .2s}
+#adm nav button.on{color:var(--on)}
+#adm nav button.on svg{background:var(--prc);color:var(--onprc)}
+#adm main{flex:1;overflow:auto;padding:4px 16px 110px;max-width:760px;width:100%;margin:0 auto}
+#adm section{display:none}
+#adm h2{margin:12px 8px 16px;font-size:28px;line-height:36px;font-weight:400}
+#adm h3{margin:0 0 4px;font-size:17px;font-weight:600}
+#adm .card{background:var(--sf);border-radius:28px;padding:20px 20px 24px;margin:12px 0}
+#adm .g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0 12px}
+#adm label{display:block;margin:16px 0 6px;font-size:13px;font-weight:500;color:var(--onv)}
+#adm input,#adm select,#adm textarea{width:100%;padding:14px 16px;font:inherit;color:var(--on);background:var(--bg);border:1px solid var(--ol);border-radius:14px;outline:0;transition:border-color .15s,box-shadow .15s}
+#adm input:focus,#adm select:focus,#adm textarea:focus{border-color:var(--pr);box-shadow:0 0 0 1px var(--pr)}
+#adm .cbs{display:flex;flex-wrap:wrap;gap:8px}
+#adm .cbs i{color:var(--onv)}
+#adm .cbs label{position:relative;display:flex;align-items:center;gap:6px;margin:0;padding:0 16px;height:36px;font-size:14px;font-weight:500;color:var(--onv);border:1px solid var(--olv);border-radius:10px;cursor:pointer}
+#adm .cbs input{position:absolute;opacity:0;width:0;height:0;padding:0;border:0}
+#adm .cbs label:has(input:checked){background:var(--prc);border-color:transparent;color:var(--onprc)}
+#adm .cbs label:has(input:checked)::before{content:"✓";font-weight:700}
+#adm .cbs label:has(input:focus-visible){outline:3px solid var(--pr);outline-offset:2px}
+#adm label.ck{display:flex;flex-direction:row-reverse;justify-content:space-between;align-items:center;margin:20px 0 0;padding:4px 0;font-size:15px;font-weight:500;color:var(--on);cursor:pointer}
+#adm label.ck input{appearance:none;-webkit-appearance:none;position:relative;flex:none;width:52px;height:32px;padding:0;border:2px solid var(--ol);border-radius:16px;background:var(--sf2);cursor:pointer}
+#adm label.ck input::before{content:"";position:absolute;top:6px;left:6px;width:16px;height:16px;border-radius:50%;background:var(--ol);transition:all .2s}
+#adm label.ck input:checked{background:var(--pr);border-color:var(--pr)}
+#adm label.ck input:checked::before{top:2px;left:22px;width:24px;height:24px;background:var(--onpr)}
+#adm #nt_map{height:260px;border-radius:20px;overflow:hidden;border:1px solid var(--olv);isolation:isolate}
+#adm .fab{position:sticky;bottom:16px;z-index:2;display:flex;justify-content:flex-end;pointer-events:none;margin-top:8px}
+#adm .fab button{pointer-events:auto;height:56px;padding:0 28px;border-radius:16px;font-size:16px;box-shadow:0 3px 10px rgba(0,0,0,.28)}
+#adm .snk{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(104px + env(safe-area-inset-bottom,0px));z-index:9100;max-width:min(92vw,520px);padding:14px 20px;border-radius:12px;background:var(--inv);color:var(--invon);box-shadow:0 3px 10px rgba(0,0,0,.3)}
+#adm .snk:empty{display:none}
+#adm .li{display:flex;align-items:center;gap:12px;padding:14px 16px 14px 20px;margin:8px 0;background:var(--sf);border-radius:20px}
+#adm .li>div{flex:1;min-width:0}
+#adm .li b{display:block;font-weight:600}
+#adm .li small{display:block;font-size:13px;color:var(--onv)}
+#adm .tag{display:inline-block;margin-right:8px;padding:1px 10px;border-radius:8px;background:var(--prc);color:var(--onprc);font-size:12px}
+#adm .st{padding:5px 14px;border-radius:10px;font-size:13px;font-weight:600;white-space:nowrap}
+#adm .st.mu{background:var(--sf2);color:var(--onv)}
+#adm .empty{padding:40px 16px;text-align:center;color:var(--onv)}
+#adm .hint{margin:8px 0 16px;font-size:13px;color:var(--onv)}
+#adm .ur{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0}
+#adm .ur input{flex:1 1 140px;width:auto}
+@media(min-width:840px){#adm .shell{flex-direction:row}#adm nav{order:0;flex-direction:column;justify-content:flex-start;gap:14px;width:96px;padding:16px 8px;background:none}#adm nav button{max-width:none;flex:none}#adm .snk{bottom:32px}}
+@media(prefers-reduced-motion:reduce){#adm *{transition:none!important}}
+#adm{-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%;overscroll-behavior:contain}
+#adm button{touch-action:manipulation}
+#adm main{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+#adm input[type=datetime-local]{min-height:52px;-webkit-appearance:none;appearance:none}
+#adm .li b{overflow-wrap:anywhere}
+#adm .g2.s{grid-template-columns:1fr 1fr}
+@media(pointer:coarse){#adm button{min-height:48px}#adm .li button{min-height:44px}#adm .cbs label{height:44px}#adm label.ck input{width:56px;height:36px;border-radius:18px}#adm label.ck input::before{top:8px;left:8px}#adm label.ck input:checked::before{top:4px;left:24px}}
+@media(max-width:600px){#adm input,#adm select,#adm textarea{font-size:16px}#adm header{padding-left:16px}#adm h2{font-size:24px;line-height:32px;margin:8px 4px 12px}#adm main{padding:4px 12px 110px}#adm .card{padding:16px 16px 20px;border-radius:24px}#adm .fab button{width:100%}#adm .fab{bottom:12px}#adm .li{padding:12px 12px 12px 16px}#adm .ur button{flex:1}}
+.tmw{background:none;border:0}
+.tm{width:40px;height:40px;box-sizing:border-box;border-radius:50%;background:#e02020;color:#fff;border:3px solid #fff;box-shadow:0 0 0 2px #000;font:bold 12px Arial,Helvetica,sans-serif;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.tm.sel{background:#2f3f9f;border-color:#f4ea2e}
+#msg{position:absolute;top:80px;left:50%;transform:translateX(-50%);background:#fff;color:#000;border:1px solid #000;border-radius:6px;padding:8px 12px;z-index:1000;display:none}
+</style>
+</head>
+<body>
+<div id="app">
+<nav id="top"></nav>
+<div id="map"></div>
+<div id="tasks"><div class="strip"><span><i class="ic"></i>Tehtävälista</span><span class="wb"><b>_</b><b>□</b><b>×</b></span></div><div class="lw"><div class="th"><span>Tila</span><span>TK</span><span>Aika</span><span>Yksiköt</span><span>Kunta</span><span>Osoite</span><span>Lisätiedot</span></div><div id="rows"></div></div><div class="hs"><span>◂</span><span>▸</span></div><div class="lp" id="tlp"><div class="cr"></div></div></div>
+<div id="tg"><div class="strip">Valitse kohde jonka tiedot tai sijainnin haluat nähdä</div><div class="tb"><div class="tl"><span>Kohteet</span><button class="pb2" disabled>Liitä VIRYT</button></div><div><div class="role">Roolisi: Peruskäyttäjä</div><div class="gr" id="tgg"></div><div class="ir"><div class="il"><span>Kohteen tiedot</span><button class="pb2" id="tg_get">Hae tiedot</button><button class="pb2" id="tg_loc">Paikanna</button></div><div class="ib" id="tgi"></div></div></div><div class="tr2"><span>Paikkatiedon tallennus</span><div class="bx"></div><button class="pb2" disabled>Lopeta paikkatiedon tallennus</button></div></div><div class="bb"><button class="pb2 on" id="tg_n">Nimen<br>mukaan</button><button class="pb2" id="tg_s">Statuksen<br>mukaan</button><button class="pb2" id="tg_h">Piilota</button><button class="pb2" disabled>Keskitä</button><button class="pb2" disabled>Muuta<br>tila</button><button class="pb2" disabled>Aseta oma<br>aliasnimesi</button><button class="pb2" disabled>Tallenna<br>omat kohteet</button><button class="pb2" id="tg_x">Sulje</button></div></div>
+<div id="msgs"><div class="mc"><button class="mb on" id="mrx">Saapuneet</button><button class="mb" id="mtx">Lähetetyt</button></div><div class="mm"><div class="mh"><span>Status</span><span>Lähettäjä</span><span>Viesti</span><span></span></div><div class="ml" id="mlist"></div></div><div class="mc"><button class="mb" disabled>Avaa</button><button class="mb" disabled>Poista</button><button class="mb">Lähetä viesti</button><button class="mb" disabled>Vastaa</button><button class="mb" disabled>Vienti</button></div></div>
+<div id="blogs"><div class="mc"><button class="mb">Liity</button><button class="mb" disabled>Sulje</button></div><div class="mm"><div class="mh"><span>ID</span><span>Aika</span><span>Läh</span><span>L...</span><span>Seloste</span></div><div class="ml"></div></div><div class="mc"><button class="mb" disabled>Avaa</button><button class="mb" disabled>Lähetä viesti</button><button class="mb" disabled>Vastaa</button><button class="mb sm" disabled>Hae 10<br>historia-<br>viestiä lisää</button><button class="mb" disabled>Vienti</button></div></div>
+<div id="qs"><div class="qm"><div class="qw"></div><div class="qt"><button>YK</button><button>CAS</button><button>AINENIMI</button><button>SÄÄ</button><button disabled>TEHTÄVÄ<br>HISTORIA</button></div><div class="qw"></div><div class="qw"></div><div class="qr"><button></button><button></button><button></button><button></button><button></button><button></button><button></button><button></button></div><div class="qbm"><button>NÄYTÄ<br>MERKATUT</button><button>PIILOTA<br>KAIKKI</button><button></button><button disabled>Palaa<br>tehtäväväliin</button><button>ASETUKSET</button><button>NÄPPIS</button><button class="ar"><svg width="30" height="34" viewBox="0 0 30 34"><path d="M15 3L3 16h7v15h10V16h7z" fill="none" stroke="#111" stroke-width="2.5" stroke-linejoin="round"/></svg></button><button class="ar"><svg width="30" height="34" viewBox="0 0 30 34"><path d="M15 31L3 18h7V3h10v15h7z" fill="none" stroke="#111" stroke-width="2.5" stroke-linejoin="round"/></svg></button></div></div><div class="qbar"><span class="addr">HEPORINNE 4-4,3-3 Vantaa</span><span class="chip" style="background:#5fd3d0">VIRVE</span><span class="chip" style="background:#d9dde3">TCP</span><span class="chip" style="background:#f2e84a">GPS</span><span class="chip" style="background:#4d7be0">AST/MIN (WGS84)</span></div></div>
+<div id='adm'><header><b>HARPEKE ylläpito</b><button id='at_out' aria-label='Kirjaudu ulos' title='Kirjaudu ulos'><svg viewBox='0 0 24 24' width='24' height='24' fill='currentColor'><path d='M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z'/></svg></button></header><div class='shell'><nav><button id='at_new'><svg viewBox='0 0 24 24'><path d='M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z'/></svg>Uusi tehtävä</button><button id='at_list'><svg viewBox='0 0 24 24'><path d='M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z'/></svg>Tehtävät</button><button id='at_stat'><svg viewBox='0 0 24 24'><path d='M12 7a5 5 0 100 10 5 5 0 000-10zm0-5C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z'/></svg>Statukset</button><button id='at_set'><svg viewBox='0 0 24 24'><path d='M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z'/></svg>Asetukset</button></nav><main><section id='ad_new'><h2>Uusi tehtävä</h2>
+<div class='card'><h3>Hälytys</h3><div class='g2'><div><label>Tehtäväkoodi</label><select id='nt_code'></select></div><div><label>Kiireellisyys</label><select id='nt_urg'><option>A</option><option>B</option><option>C</option><option>D</option></select></div></div><label>Hälytettävät yksiköt</label><div class='cbs' id='nt_units'></div></div>
+<div class='card'><h3>Sijainti</h3><div class='g2'><div><label>Kunta</label><input id='nt_kunta' value='Vantaa'></div><div><label>Kunnan osa</label><input id='nt_kosa'></div><div><label>Osoite</label><input id='nt_osoite'></div><div><label>Risteävä katu</label><input id='nt_risteava'></div></div><label>Valitse sijainti kartalta</label><div id='nt_map'></div><p class='hint' id='nt_hint'>Napauta karttaa valitaksesi sijainnin.</p><div class='g2 s'><div><label>Leveys (lat)</label><input id='nt_lat'></div><div><label>Pituus (lon)</label><input id='nt_lon'></div></div></div>
+<div class='card'><h3>Ilmoituksen tiedot</h3><label>Mitä on tapahtunut</label><textarea id='nt_info' rows='3'></textarea><div class='g2'><div><label>Rakennustyyppi</label><input id='nt_rak' list='nt_rakl'><datalist id='nt_rakl'><option>Asuinrakennus</option><option>Liikerakennus</option><option>Teollisuusrakennus</option><option>Oppilaitos</option><option>Hoitolaitos</option><option>Ulkotila</option><option>Muu</option></datalist></div><div><label>Ilmoitinlaite</label><input id='nt_ilm'></div></div><label>Pelastus kiireellisen tehtävän kriteerit</label><input id='nt_krit'><label>Kohdetieto</label><input id='nt_kohde'><div class='g2'><div><label>Soittajan nimi</label><input id='nt_soit'></div><div><label>Puhelinnumero</label><input id='nt_puh' type='tel'></div></div></div>
+<div class='card'><label class='ck'>Ajasta tehtävä<input type='checkbox' id='nt_sch'></label><input type='datetime-local' id='nt_dt' style='display:none;margin-top:12px'></div>
+<div class='fab'><button class='pr' id='nt_go'>Luo tehtävä</button></div><span id='nt_msg' class='snk'></span></section>
+<section id='ad_list'></section><section id='ad_stat'></section>
+<section id='ad_set'><h2>Asetukset</h2>
+<div class='card'><h3>Lisää yksikkö</h3><label>Yksikkötunnus</label><input id='un_id' placeholder='esim. RHE62'><p class='hint'>Yksikkötunnus toimii myös kirjautumistunnuksena ja salasanana.</p><button class='pr' id='un_add'>Lisää yksikkö</button><span id='un_msg' class='snk'></span></div>
+<div class='card'><h3>Yksiköt</h3><div id='ad_units'></div></div></section></main></div></div>
+<div id="msg"></div>
+<div id="status"></div>
+<button id="corner" aria-label="Valikko"></button>
+<div id="mapui"><div id="zoom"><button id="zin">+</button><button id="zout">−</button><div class="info"><div id="zbase">Maastokartta</div><div id="zscale">500 m</div><div class="bar" id="zbar"></div></div><button class="empty"></button></div><div id="sb"><span class="addr" id="addr">HEPORINNE 4-4,3-3 Vantaa</span><span class="chip" style="background:#5fd3d0">VIRVE</span><span class="chip" style="background:#d9dde3">TCP</span><span class="chip" style="background:#f2e84a">GPS</span><span class="chip" style="background:#4d7be0">AST/MIN (WGS84)</span></div></div>
+<div id="sys"><button disabled>Sammuta PC</button><button id="sysq">Lopeta PEKE</button><button id="sysu">Vaihda käyttäjä</button><button>Jatka kirjautumista</button><button>Ohje</button><button id="sysback">PALUU</button><i></i></div>
+<div id="fm"><button>Asetukset</button><button>Tasot</button><button>Seuranta</button><button>Kohteet</button><button>Keskitä<br>omaan</button><button>Keskitys pois</button><button>Näytä<br>vain oma</button><button>Näytä<br>Työpöytä</button><button>Tulosta</button><button id="fmback">PALUU</button><i></i></div>
+<div id="fm4"><button>Kohteet</button><button>Piirtotasot</button><button>Merkkipiste</button><button>Reitti</button><button>Navigointi</button><button>Etsi<br>sijainti</button><button>Osoita<br>koordinaatit</button><button>Koordinaatti-<br>muoto</button><button>Mittaus</button><button>Piirtotyökalut</button><button id="fm4back">PALUU</button><i></i></div>
+<div id="quit"><div class="qd"><div class="qt">Haluatko todellakin lopettaa?</div><button class="qb" id="qok" style="left:calc(50% - 202px)">OK</button><button class="qb" id="qcn" style="left:calc(50% + 23px)">Peruuta</button></div></div>
+<div id="closed"></div>
+</div>
+<aside id="ctrl"></aside>
+<div id="login"><div class="stage" id="lst"><div class="dlg">
+<div class="t1">HARPEKE LOGIN</div><div class="ver">9.93</div>
+<div class="t2" id="lmsg">Aineistoissa voi olla puutteita. Pyri varmistamaan paikkatieto.</div>
+<div class="lb" style="top:112px">Käyttäjätunnus</div><input id="lu" style="top:108px" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="none">
+<div class="lb" style="top:170px">Salasana</div><input id="lp" type="text" style="top:165px" autocomplete="off" inputmode="none">
+<button class="b" id="lok" style="left:135px" disabled>OK</button><button class="b" id="lcn" style="left:327px">Peruuta</button><button class="b" id="lkb" style="left:517px">Näppis</button>
+<div class="t3">Vain harjoituskäyttöön</div>
+</div><div class="kb" id="lkbd"></div></div></div>
+<div hidden>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+// --- ASETUKSET -----------------------------------------------------------
+var MML_KEY = "0db2387f-5eca-4d38-ba91-ec73c90da658";   // Maanmittauslaitoksen API-avain
+var HOME = [60.2934, 25.0378], HOME_Z = 12; // Vantaa
+var DBURL = 'https://harpeke-c433c-default-rtdb.europe-west1.firebasedatabase.app'; // Firebase Realtime Database -osoite, esim. https://projekti-default-rtdb.europe-west1.firebasedatabase.app (tyhjä = vain tämän selaimen muisti)
+// -------------------------------------------------------------------------
+
+// F1–F8 navigaatio
+var nav=document.getElementById("top");
+var L_={1:"Näytä",2:"Tehtävät",3:"Vapaa",4:"Kartat",5:"Viestit",6:"Blogit",7:"Kohteet",8:"Kyselyt"};
+for(var i=1;i<=8;i++){var b=document.createElement("button");b.innerHTML="<strong>F"+i+"</strong><span>"+(L_[i]||"Kuvaus "+i)+"</span>";b.onclick=(function(n){return function(){this.blur();showView(n)}})(i);nav.appendChild(b)}
+
+// Näkymät: F2 = Tehtävät, muut = kartta
+var curView=1;
+function showView(n){
+  nav.style.display=n===7?"none":"";
+  var fm=document.getElementById("fm"),f4=document.getElementById("fm4");
+  if(n===1){f4.style.display="none";pop.style.display="none";sys.style.display="none";["tasks","msgs","blogs","qs","tg"].forEach(function(id){document.getElementById(id).style.display="none"});document.getElementById("mapui").style.display="";document.getElementById("map").style.display="";if(typeof map!=="undefined")map.invalidateSize();curView=1;Array.prototype.forEach.call(nav.children,function(b,i){b.classList.toggle("on",i===0)});fm.style.display="grid";nav.children[0].classList.add("on");return}
+  fm.style.display="none";f4.style.display=n===4?"grid":"none";if(n===4){pop.style.display="none";sys.style.display="none"}
+  document.getElementById("mapui").style.display=([2,5,6,7,8].indexOf(n)>=0?"none":"");
+  curView=n;if(n===2)nav.children[1].classList.remove("alert");
+  Array.prototype.forEach.call(nav.children,function(b,i){b.classList.toggle("on",i+1===n&&n!==3)});
+  var t=document.getElementById("tasks"),m=document.getElementById("map");
+  var g=document.getElementById("msgs"),bg=document.getElementById("blogs"),qs=document.getElementById("qs");
+  t.style.display=n===2?"flex":"none";g.style.display=n===5?"grid":"none";bg.style.display=n===6?"grid":"none";qs.style.display=n===8?"flex":"none";document.getElementById("tg").style.display=n===7?"flex":"none";if(n===7)tgRender(true);
+  if(n===2||n===5||n===6||n===7||n===8){m.style.display="none"}
+  else{m.style.display="";if(typeof map!=="undefined")map.invalidateSize()}
+}
+
+// F3 statusvalikko
+var ST=[["TVO","#d4de94","#000"],["Matkalla...","#f4ea2e","#000"],["Kohteessa","#3ec6f2","#000"],["TPA","#b3d9e0","#000"],["Vapaa","#5ed12d","#000"],["Asemalla","#1d4fe0","#fff"],["Ei hälyt","#e6c46e","#000"]];
+var RT=[["Paik.Tallennus","#dcdde5"],["Tiheä paik","#dfe0ea"],["Varausaste","#a9aec8"],["Paluu","#e0e1e8"],["Ohjaus-statukset","#e0e1e8"],["","#e3e4ea"],["","#e3e4ea"]];
+var pop=document.getElementById("status");
+var f3=nav.children[2];
+var cur=-1,curT="",stBtns=[];
+f3.querySelector("span").textContent="Status";
+function renderStatusMenu(){stBtns.forEach(function(b,i){b.innerHTML="<span>"+ST[i][0]+"</span>"+(i===cur?"<span>"+curT+"</span>":"")})}
+function pickStatus(i){
+  var d=new Date();cur=i;curT=pad(d.getHours())+":"+pad(d.getMinutes());
+  f3.style.setProperty("--st",i===5?"#1c3fd6":ST[i][1]);f3.style.setProperty("--st-text",ST[i][2]);
+  f3.querySelector("span").textContent=ST[i][0].replace("...","");unitStatus(i);
+  renderStatusMenu();pop.style.display="none";
+}
+function clearStatus(){
+  cur=-1;f3.style.removeProperty("--st");f3.style.removeProperty("--st-text");
+  f3.querySelector("span").textContent="Status";renderStatusMenu();
+}
+ST.forEach(function(s,i){
+  var x=document.createElement("button");
+  x.style.background=s[1];x.style.color=s[2];
+  x.onclick=function(){pickStatus(i)};
+  stBtns.push(x);pop.appendChild(x);
+  var rt=RT[i],y=document.createElement("button");
+  if(rt[0])y.innerHTML="<span>"+rt[0]+"</span>";
+  y.style.background=rt[1];
+  if(rt[0]==="Paluu")y.onclick=function(){pop.style.display="none"};
+  else y.style.cursor="default";
+  pop.appendChild(y);
+});
+renderStatusMenu();
+f3.onclick=function(){pop.style.display=pop.style.display==="grid"?"none":"grid"};
+
+// Viestit (F5): Saapuneet / Lähetetyt
+(function(){var a=document.getElementById("mrx"),b=document.getElementById("mtx");a.onclick=function(){a.classList.add("on");b.classList.remove("on")};b.onclick=function(){b.classList.add("on");a.classList.remove("on")}})();
+
+// Kartta
+var msg=document.getElementById("msg");
+function say(t){msg.textContent=t;msg.style.display="block"}
+if(typeof L==="undefined"){say("Leaflet ei latautunut – tarkista verkkoyhteys")}
+else{
+  var map=L.map("map",{zoomControl:false,attributionControl:false}).setView(HOME,HOME_Z);
+  var url="https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0/maastokartta/default/WGS84_Pseudo-Mercator/{z}/{y}/{x}.png?api-key="+MML_KEY;
+  var tiles=L.tileLayer(url,{maxZoom:18,attribution:"© Maanmittauslaitos"}).addTo(map);
+  var errs=0;tiles.on("tileerror",function(){if(++errs===3)say("Karttalaatat eivät lataudu – tarkista API-avain")});
+}
+// Ohjauspaneeli
+var ctrl=document.getElementById("ctrl");
+var h2=document.createElement("h2");h2.textContent="Ohjauspaneeli";ctrl.appendChild(h2);
+function sec(t){var h=document.createElement("h3");h.textContent=t;ctrl.appendChild(h);var d=document.createElement("div");d.className="row";ctrl.appendChild(d);return d}
+function btn(p,t,fn){var x=document.createElement("button");x.textContent=t;x.onclick=fn;p.appendChild(x);return x}
+var hasMap=(typeof map!=="undefined");
+
+var r=sec("Status (F3)");
+ST.forEach(function(s,i){var x=btn(r,s[0],function(){pickStatus(i)});x.style.background=s[1];x.style.color=s[2]});
+btn(r,"Tyhjä",clearStatus);
+
+r=sec("Nappien painallus");
+for(var k=1;k<=8;k++)(function(k){btn(r,"F"+k,function(){nav.children[k-1].click()})})(k);
+
+r=sec("Karttataso");
+var LAYERS={"Maasto":["maastokartta","png"],"Tausta":["taustakartta","png"],"Ilmakuva":["ortokuva","jpg"]};
+Object.keys(LAYERS).forEach(function(n){btn(r,n,function(){if(!hasMap)return;document.getElementById('zbase').textContent=(n==='Ilmakuva'?n:n+'kartta');var l=LAYERS[n];tiles.setUrl("https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0/"+l[0]+"/default/WGS84_Pseudo-Mercator/{z}/{y}/{x}."+l[1]+"?api-key="+MML_KEY)})});
+
+r=sec("Kartta");
+btn(r,"Zoom +",function(){if(hasMap)map.zoomIn()});
+btn(r,"Zoom −",function(){if(hasMap)map.zoomOut()});
+btn(r,"Vantaa",function(){if(hasMap)map.setView(HOME,HOME_Z)});
+btn(r,"Helsinki",function(){if(hasMap)map.setView([60.1699,24.9384],13)});
+btn(r,"Tampere",function(){if(hasMap)map.setView([61.4978,23.7610],13)});
+
+// Tehtävät
+var CODES=`H351 Asemavalmius
+H352 Valmiussiirto
+H36 Tiedoksianto pelastustoimelle
+H371 Palo-/tähystyslento
+066 Viranomainen uhattuna: hätäkutsu Virve-radiolla
+49 Onnettomuustilanne; muu
+103 Automaattinen palohälytys
+104 Ilmoitinlaitehälytys: säteilyhälytys
+105 Ilmoitinlaitehälytys: hissihälytys
+106 Ilmoitinlaitehälytys: laitevika
+107 Ilmoitinlaitehälytys: yhteysvika
+108 Ilmoitinlaitehälytys: huolto
+200 Tieliikenneonnettomuus: muu tai uhka
+201 Tieliikenneonnettomuus; peltikolari, suistuminen
+202 Tieliikenneonnettomuus; Pieni
+203 Tieliikenneonnettomuus; Keskisuuri
+204 Tieliikenneonnettomuus; Suuri
+205 Tieliikenneonnettomuus; eläin osallisena
+206 Tieliikenneonnettomuus maan alla; Pieni
+207 Tieliikenneonnettomuus maan alla; Keskisuuri
+208 Tieliikenneonnettomuus maan alla; Suuri
+210 Raideliikenneonnettomuus; muu
+211 Raideliikenneonnettomuus; peltikolari
+212 Raideliikenneonnettomuus; Pieni
+213 Raideliikenneonnettomuus; Keskisuuri
+214 Raideliikenneonnettomuus; Suuri
+215 Raideliikenneonnettomuus; eläin osallisena
+216 Raideliikenneonnettomuus maan alla; Pieni
+217 Raideliikenneonnettomuus maan alla; Keskisuuri
+218 Raideliikenneonnettomuus maan alla; Suuri
+220 Vesiliikenneonnettomuus; Muu
+221 Vesiliikenneonnettomuus; Pieni
+222 Vesiliikenneonnettomuus; Keskisuuri
+223 Vesiliikenneonnettomuus; Suuri
+231 Ilmaliikenneonnettomuus; Pieni
+232 Ilmaliikenneonnettomuus; Keskisuuri
+233 Ilmaliikenneonnettomuus; Suuri
+234 Ilmaliikenneonnettomuusvaara; Pieni
+235 Ilmaliikenneonnettomuusvaara; Keskisuuri
+236 Ilmaliikenneonnettomuusvaara; Suuri
+271 Maastoliikenneonnettomuus
+401 Rakennuspalo; Pieni
+402 Rakennuspalo; Keskisuuri
+403 Rakennuspalo; Suuri
+404 Rakennuspalo maan alla; pieni
+405 Rakennuspalo maan alla; keskisuuri
+406 Rakennuspalo maan alla; suuri
+411 Liikennevälinepalo; Pieni
+412 Liikennevälinepalo; Keskisuuri
+413 Liikennevälinepalo; Suuri
+414 Liikennevälinepalo maan alla; pieni
+415 Liikennevälinepalo maan alla; keskisuuri
+416 Liikennevälinepalo maan alla; suuri
+420 Savuhavainto/tarkastustehtävä
+421 Maastopalo; Pieni
+422 Maastopalo; Keskisuuri
+423 Maastopalo; Suuri
+424 Turvetuotantoaluepalo: pieni
+425 Turvetuotantoaluepalo: keskisuuri
+426 Turvetuotantoaluepalo: suuri
+431 Tulipalo muu; Pieni
+432 Tulipalo muu; Keskisuuri
+433 Tulipalo muu; Suuri
+434 Tulipalo muu, maan alla; pieni
+435 Tulipalo muu, maan alla; keskisuuri
+436 Tulipalo muu, maan alla; suuri
+441 Räjähdys / sortuma; Pieni
+442 Räjähdys / sortuma; Keskisuuri
+443 Räjähdys / sortuma; Suuri
+444 Räjähdys- / sortumavaara
+451 Vaarallisen aineen onnettomuus; Pieni
+452 Vaarallisen aineen onnettomuus; Keskisuuri
+453 Vaarallisen aineen onnettomuus; Suuri
+455 Vaarallisen aineen onnettomuus; vaara
+456 Ydinvoimalaitos: varautumistilanne
+457 Ydinvoimalaitos: laitoshätätilanne
+458 Ydinvoimalaitos: yleishätätilanne
+461 Vahingontorjunta; Pieni
+462 Vahingontorjunta; Keskisuuri
+463 Vahingontorjunta; Suuri
+471 Öljyvahinko; maalla, pieni
+472 Öljyvahinko; maalla, keskisuuri
+473 Öljyvahinko; maalla, suuri
+474 Öljyvahinko; vesistössä, pieni
+475 Öljyvahinko; vesistössä, keskisuuri
+476 Öljyvahinko; vesistössä, suuri
+477 Öljyvahinko; vaara
+480 Ihmisen pelastaminen; Muu
+481 Ihmisen pelastaminen; Etsintä
+482 Ihmisen pelastaminen; Avunanto
+483 Ihmisen pelastaminen; Vedestä
+484 Ihmisen pelastaminen; Pintapelastus
+485 Ihmisen pelastaminen; Maastosta
+486 Ihmisen pelastaminen; Puristuksista
+487 Ihmisen pelastaminen; ylhäältä/alhaalta
+490 Onnettomuustilanne maanpäällä (epäselvä)
+550 Avunanto; muu
+551 Avunanto; Virka-apu toiselle viranomaiselle
+552 Avunanto; tarkistus tms. tehtävä
+553 Avunanto; uhka- / varuillaolotehtävä
+554 Avunanto; Tarkistus- / varmistustehtävä
+580 Eläintehtävä; muu
+581 Eläintehtävä; eläimen pelastaminen
+901 Pelastustoimi poikkeusoloissa`.split("\n").map(function(l){var i=l.indexOf(" ");return [l.slice(0,i),l.slice(i+1)]});
+var tasks=[];
+var rowsEl=document.getElementById("rows");
+function pad(n){return (n<10?"0":"")+n}
+function stat(t){var s=(Date.now()-t.at)/1000;return s<60?"KE!":(s<300?"KE":"SU")}
+var selId=null,LPBTN={};
+function moveSel(dir){
+  var vis=tasks.filter(function(t){return !t.hidden}),i=-1;
+  if(!vis.length)return;
+  vis.forEach(function(t,k){if(t.id===selId)i=k});
+  var n=(i<0)?0:Math.max(0,Math.min(vis.length-1,i+dir));
+  selId=vis[n].id;renderTasks();
+  var el=rowsEl.querySelector('.sel');if(el&&el.scrollIntoView)el.scrollIntoView({block:'nearest'});
+}
+function curSel(){var f=tasks.filter(function(t){return t.id===selId&&!t.hidden});return f[0]||null}
+function updSel(){
+  var sel=curSel(),cr=document.querySelector('#tlp .cr');
+  if(cr)cr.textContent=sel?[
+    'Tila: '+stat(sel)+'  Tehtäväkoodi ja kiireisyys: '+sel.code+' '+sel.urg+' Aika: '+sel.time,
+    'Hälytetyt yksiköt: '+sel.units,
+    'Kunta: '+sel.kunta+' Osoite: '+sel.osoite,
+    'Risteävä katu: '+(sel.risteava||'')+'  Kunnan osa: '+(sel.kosa||''),
+    'Lisätiedot: '+sel.info+(sel.rakennus?'  Rakennustyyppi: '+sel.rakennus:'')+(sel.krit?'  Kriteerit: '+sel.krit:''),
+    'Ilmoitinlaite: '+(sel.ilm||'')+'  Kohdetieto: '+(sel.kohde||''),
+    'Soittajan nimi: '+(sel.soit||'')+'  Puhelinnumero: '+(sel.puh||''),
+    'Suorite seloste:'
+  ].join('\n'):'';
+  var COL={'JONO':['#e46ee8','#000'],'KESK':['#1a56e8','#fff'],'SUOR':['#6d7280','#fff']};
+  ['Avaa','Välitä','Keskitä','Reitti','JONO','KESK','SUOR','ODOT','STATUS...'].forEach(function(l){
+    var b=LPBTN[l];if(!b)return;
+    b.disabled=!sel;
+    b.style.background=(sel&&COL[l])?COL[l][0]:'';b.style.color=(sel&&COL[l])?COL[l][1]:'';
+  });
+}
+function renderTasks(){
+  rowsEl.innerHTML="";
+  tasks.forEach(function(t){
+    if(t.hidden)return;
+    var r=document.createElement("div");r.className="tr"+(t.id===selId?" sel":"");
+    [stat(t),t.code+" "+t.urg,t.time,t.units,t.kunta,t.osoite,t.info].forEach(function(v){var s=document.createElement("span");s.textContent=v;r.appendChild(s)});
+    r.onpointerdown=function(){selId=t.id;renderTasks()};
+    rowsEl.appendChild(r);
+  });
+  updSel();syncMarkers();
+}
+setInterval(renderTasks,1000);
+
+// Ohjauspaneeli: uusi tehtävä
+function field(label,ph,val){var d=sec(label);var i=document.createElement("input");i.placeholder=ph||"";if(val)i.value=val;d.appendChild(i);return i}
+function select(label,opts){var d=sec(label);var s=document.createElement("select");opts.forEach(function(o,i){var e=document.createElement("option");e.value=i;e.textContent=o;s.appendChild(e)});d.appendChild(s);return s}
+var h=document.createElement("h2");h.textContent="Uusi tehtävä";h.style.marginTop="22px";ctrl.appendChild(h);
+var fCode=select("Tehtäväkoodi",CODES.map(function(c){return c[0]+" – "+c[1]}));
+var fUrg=select("Kiireellisyys",["A","B","C","D"]);
+var fUnits=field("Yksiköt","esim. RHE60, RHE61");
+var fKunta=field("Kunta","","Vantaa");
+var fAddr=field("Osoite","esim. Maalinauhantie 0");
+var fInfo=field("Lisätiedot","");
+r=sec("");
+var go=btn(r,"Luo tehtävä",function(){
+  var d=new Date();
+  tasks.unshift({id:d.getTime()+'_'+Math.random(),at:d.getTime(),code:CODES[fCode.value][0],urg:fUrg.options[fUrg.selectedIndex].textContent,time:pad(d.getHours())+":"+pad(d.getMinutes()),units:fUnits.value,kunta:fKunta.value,osoite:fAddr.value,info:fInfo.value});
+  renderTasks();
+  if(curView!==2)nav.children[1].classList.add("alert");
+});
+go.style.background="#5fbf4f";
+btn(r,"Tyhjennä kaikki",function(){tasks.length=0;renderTasks()});
+// Kartan zoom, mittakaava ja alapalkki
+if(typeof map!=='undefined'){
+  
+  document.getElementById('zin').onclick=function(){map.zoomIn()};
+  document.getElementById('zout').onclick=function(){map.zoomOut()};
+  var NICE=[10,20,50,100,200,500,1000,2000,5000,10000,20000,50000,100000];
+  var updScale=function(){
+    var mpp=156543.03*Math.cos(map.getCenter().lat*Math.PI/180)/Math.pow(2,map.getZoom()),best=NICE[0];
+    NICE.forEach(function(m){if(m/mpp<=110)best=m});
+    document.getElementById('zscale').textContent=best>=1000?(best/1000)+' km':best+' m';
+    document.getElementById('zbar').style.width=Math.round(best/mpp)+'px';
+  };
+  map.on('zoomend moveend',updScale);updScale();
+}
+
+// Tehtävät-sivun alapaneeli
+var UPA='<svg width="30" height="34" viewBox="0 0 30 34"><path d="M15 3L3 16h7v15h10V16h7z" fill="none" stroke="#111" stroke-width="2.5" stroke-linejoin="round"/></svg>';
+var DNA='<svg width="30" height="34" viewBox="0 0 30 34"><path d="M15 31L3 18h7V3h10v15h7z" fill="none" stroke="#111" stroke-width="2.5" stroke-linejoin="round"/></svg>';
+var LPB=[
+ ['Avaa','l',20,100,138,68,0],['Piilota<br>tehtävä','l',20,179,138,68,1],['Näytä<br>kaikki','l',20,259,138,68,1],
+ ['JONO','l',167,340,130,69,0,'sm'],['KESK','l',310,340,130,69,0,'sm'],['SUOR','l',450,340,130,69,0,'sm'],['ODOT','l',591,340,130,69,0,'sm'],['STATUS...','l',731,340,130,69,0,'sm'],
+ ['Välitä','r',174,103,123,68,0],['Avaa<br>suodatettu lista','r',26,103,138,68,1,'xs'],['Uusi','r',23,185,137,68,1],
+ ['Keskitä','r',172,263,125,68,0],[UPA,'r',86,263,60,68,1],[DNA,'r',21,263,60,68,1],['Reitti','r',170,340,128,69,0],['Sulje','r',20,342,135,69,1]
+];
+LPB.forEach(function(a){
+  var b=document.createElement('button');b.className='pb'+(a[7]?' '+a[7]:'');b.innerHTML=a[0];
+  b.style.top=a[3]+'px';b.style[a[1]==='l'?'left':'right']=a[2]+'px';b.style.width=a[4]+'px';b.style.height=a[5]+'px';b.disabled=!a[6];
+  if(a[0]==='Reitti')b.onclick=function(){var s=curSel();if(!s)return;var d=s.lat!=null?s.lat+','+s.lon:[s.osoite,s.kunta].join(', ');var l=document.createElement('a');l.href='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(d)+'&travelmode=driving';l.target='_blank';l.rel='noopener';document.body.appendChild(l);l.click();l.remove()};
+  if(a[0]==='Sulje')b.onclick=function(){showView(0)};
+  if(a[0]==='Keskitä')b.onclick=function(){var s=curSel();if(s&&s.lat!=null){showView(0);map.setView([s.lat,s.lon],16)}};
+  if(a[0]==='Piilota<br>tehtävä')b.onclick=function(){var s=curSel();if(s){s.hidden=true;selId=null;renderTasks()}};
+  if(a[0]==='Näytä<br>kaikki')b.onclick=function(){tasks.forEach(function(t){t.hidden=false});renderTasks()};
+  if(a[0]===UPA)b.onclick=function(){moveSel(-1)};
+  if(a[0]===DNA)b.onclick=function(){moveSel(1)};
+  document.getElementById('tlp').appendChild(b);LPBTN[a[0]]=b;
+});
+
+// Vasen alakulma: järjestelmävalikko
+var sys=document.getElementById('sys');
+document.getElementById('corner').onclick=function(){pop.style.display='none';sys.style.display='grid'};
+document.getElementById('sysback').onclick=function(){sys.style.display='none'};
+var quit=document.getElementById('quit');
+document.getElementById('sysq').onclick=function(){quit.style.display='flex'};
+document.getElementById('qcn').onclick=function(){quit.style.display='none'};
+document.getElementById('qok').onclick=function(){quit.style.display='none';sys.style.display='none';try{window.close()}catch(e){}document.getElementById('closed').style.display='block'};
+document.getElementById('sysu').onclick=function(){sys.style.display='none';pop.style.display='none';showLogin()};
+document.getElementById('fmback').onclick=function(){document.getElementById('fm').style.display='none';nav.children[0].classList.remove('on')};
+document.getElementById('fm4back').onclick=function(){document.getElementById('fm4').style.display='none';nav.children[3].classList.remove('on')};
+
+// Kohteet (F7): kaikkien yksiköiden statukset, päivittyy automaattisesti
+var tgSel=null,tgSort='n',tgHid={},tgSig='',tgInfo=false,tgNote='';
+function tgSt(u){return unitLive(u)&&u.st?u.st:''}
+// Yksikkötunnus: kirjainetuliite, sitten asema (2 ensimmäistä numeroa), sitten loput numerot
+function tgNat(a,b){
+  var ma=/^(\D*)(\d*)(.*)$/.exec(a),mb=/^(\D*)(\d*)(.*)$/.exec(b),k;
+  if(ma[1]!==mb[1])return ma[1]<mb[1]?-1:1;
+  var d1=ma[2],d2=mb[2];
+  if(d1&&!d2)return 1;if(!d1&&d2)return -1;
+  if(d1){k=(+d1.slice(0,2))-(+d2.slice(0,2));if(k)return k;k=(+d1.slice(2)||0)-(+d2.slice(2)||0);if(k)return k}
+  return a<b?-1:a>b?1:0;
+}
+function tgInfoText(){
+  var u=stLoad().units.filter(function(x){return x.id===tgSel})[0];
+  if(!u)return '';
+  var d=u.stAt?new Date(u.stAt):null;
+  return 'Kohde: '+u.id+'\nKirjautuminen: '+(unitLive(u)?'kirjautunut':'ei kirjautunut')+'\nStatus: '+(tgSt(u)?u.st+(d?' (alkaen '+pad(d.getHours())+':'+pad(d.getMinutes())+')':''):'ei statusta')+(tgNote?'\n\n'+tgNote:'');
+}
+function tgRender(force){
+  var us=stLoad().units.filter(function(u){return !tgHid[u.id]&&u.id!==curUnit});
+  us.sort(function(a,b){
+    if(tgSort==='s'){var k=(tgSt(a)?0:1)-(tgSt(b)?0:1);if(k)return k;k=tgSt(a).localeCompare(tgSt(b),'fi');if(k)return k}
+    return tgNat(a.id,b.id)});
+  var hn=Object.keys(tgHid).length,sig=JSON.stringify([us.map(function(u){return [u.id,tgSt(u),u.sc,u.stAt,unitLive(u)]}),tgSel,tgSort,hn,tgInfo,tgNote]);
+  if(!force&&sig===tgSig)return;tgSig=sig;
+  ge('tgg').innerHTML=us.map(function(u){
+    var t=tgSt(u),st=t?' style="background:'+u.sc+';color:'+(u.sx||'#000')+'"':'';
+    return '<button class="tc'+(u.id===tgSel?' sel':'')+'" data-u="'+escH(u.id)+'"'+st+'>'+escH(u.id)+' #*'+(t?'<br>'+escH(t):'')+'</button>'}).join('');
+  ge('tgi').textContent=tgInfo&&tgSel?tgInfoText():'';
+  ge('tg_n').classList.toggle('on',tgSort==='n');ge('tg_s').classList.toggle('on',tgSort==='s');
+  ge('tg_h').innerHTML=tgSel||!hn?'Piilota':'Näytä<br>kaikki';
+  ge('tg_get').disabled=ge('tg_loc').disabled=!tgSel;
+}
+ge('tgg').onclick=function(e){var b=e.target.closest('.tc');if(!b)return;tgSel=tgSel===b.dataset.u?null:b.dataset.u;tgInfo=false;tgNote='';tgRender(true)};
+ge('tg_get').onclick=function(){tgInfo=true;tgNote='';tgRender(true)};
+ge('tg_loc').onclick=function(){tgInfo=true;tgNote='Yksikön sijaintitietoa ei ole saatavilla.';tgRender(true)};
+ge('tg_n').onclick=function(){tgSort='n';tgRender(true)};
+ge('tg_s').onclick=function(){tgSort='s';tgRender(true)};
+ge('tg_h').onclick=function(){if(tgSel){tgHid[tgSel]=1;tgSel=null;tgInfo=false}else tgHid={};tgRender(true)};
+ge('tg_x').onclick=function(){showView(0)};
+setInterval(function(){if(curView===7)tgRender(false)},1000);
+
+// ===== Ylläpito ja yksikkörekisteri =====
+var SKEY='harpeke_state_v1',SMEM=null,curUnit=null;
+function ge(i){return document.getElementById(i)}
+function gv(i){return ge(i).value.trim()}
+function escH(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function SEED(){return{units:[{id:'RKU341'},{id:'RHE60'},{id:'RHE61'}],tasks:[]}}
+function stLoad(){
+  if(DBURL)return SMEM||(SMEM=SEED());
+  try{var j=localStorage.getItem(SKEY);if(j)return SMEM=JSON.parse(j)}catch(e){}return SMEM||(SMEM=SEED())
+}
+var dbPend=0,dbLast=0,dbSeeded=0;
+function dbBase(){return DBURL.replace(/\/$/,'')+'/harpeke/'}
+var dbErr='',noKA=0;
+var dbBadge=document.createElement('div');
+dbBadge.style.cssText='position:fixed;left:6px;bottom:3px;font:11px sans-serif;color:#fff;background:rgba(0,0,0,.55);padding:1px 6px;border-radius:3px;z-index:99999;pointer-events:none';
+dbBadge.textContent=DBURL?'DB v2: yhdistetään…':'DB v2: ei käytössä (DBURL tyhjä)';
+document.body.appendChild(dbBadge);
+function dbFail(t){dbBadge.textContent='DB v2: '+t;dbBadge.style.background='rgba(190,0,0,.8)';if(dbErr!==t){dbErr=t;console.error('Firebase: '+t);try{say('Tietokanta: '+t)}catch(e){}}}
+function dbOk(){dbBadge.textContent='DB v2: yhdistetty ✓';dbBadge.style.background='rgba(0,120,0,.7)';if(dbErr){dbErr='';try{if(msg.textContent.indexOf('Tietokanta')===0)msg.style.display='none'}catch(e){}}}
+function dbReq(m,path,body){
+  dbPend++;dbLast=Date.now();
+  var u=dbBase()+path+'.json',b=body==null?undefined:JSON.stringify(body);
+  function go(ka){return fetch(u,{method:m,body:b,keepalive:ka})}
+  // keepalive + CORS-preflight ei toimi kaikissa selaimissa -> yritetään ilman sitä
+  return (noKA?go(false):go(true).catch(function(){noKA=1;return go(false)})).then(function(r){
+    if(!r.ok)dbFail('virhe '+r.status+(r.status===401?' (tarkista Firebasen säännöt)':''));else dbOk();
+  }).catch(function(){dbFail('yhteys epäonnistui')}).then(function(){dbPend--;dbLast=Date.now()})
+}
+function stSave(s){
+  if(DBURL){
+    var o=SMEM||SEED();
+    ['units','tasks'].forEach(function(k){
+      var om={},nm={};
+      o[k].forEach(function(x){om[x.id]=JSON.stringify(x)});
+      s[k].forEach(function(x){nm[x.id]=1;if(om[x.id]!==JSON.stringify(x))dbReq('PUT',k+'/'+encodeURIComponent(x.id),x)});
+      for(var id in om)if(!nm[id])dbReq('DELETE',k+'/'+encodeURIComponent(id));
+    });
+    SMEM=s;return;
+  }
+  SMEM=s;try{localStorage.setItem(SKEY,JSON.stringify(s))}catch(e){}
+}
+function dbPoll(){
+  if(!DBURL||dbPend||Date.now()-dbLast<1500)return;
+  fetch(dbBase().replace(/harpeke\/$/,'')+'harpeke.json').then(function(r){return r.json()}).then(function(d){
+    if(d&&d.error){dbFail('virhe: '+d.error+' (tarkista Firebasen säännöt)');return}
+    dbOk();
+    if(dbPend||Date.now()-dbLast<1500)return;
+    if(d==null){if(!dbSeeded){dbSeeded=1;SMEM={units:[],tasks:[]};stSave(SEED());dbReq('PUT','init',1)}return}
+    var ls=function(o){return Object.keys(o||{}).map(function(k){return o[k]})};
+    SMEM={units:ls(d.units).sort(function(a,b){return tgNat(a.id,b.id)}),tasks:ls(d.tasks).sort(function(a,b){return b.at-a.at})};
+  }).catch(function(){dbFail('yhteys epäonnistui')});
+}
+setInterval(dbPoll,1000);
+function stMut(fn){var s=JSON.parse(JSON.stringify(stLoad()));fn(s);stSave(s);return s}
+function fmtT(ms){var d=new Date(ms);return pad(d.getDate())+'.'+pad(d.getMonth()+1)+'. '+pad(d.getHours())+':'+pad(d.getMinutes())}
+var MYSID=(function(){var k='harpeke_sid';try{var v=sessionStorage.getItem(k);if(!v){v=Math.random().toString(36).slice(2)+Date.now().toString(36);sessionStorage.setItem(k,v)}return v}catch(e){return Math.random().toString(36).slice(2)}})();
+function unitLive(u){return !!u.on&&Date.now()-(u.ping||0)<120000}
+function unitLogin(u,p){
+  if(u==='harpeke_admin'&&p==='1234'){adOpen();return true}
+  var l=u.toLowerCase(),un=null;
+  stLoad().units.forEach(function(x){if(x.id.toLowerCase()===l&&(p.toLowerCase()===l||(l==='rku341'&&p==='1234')))un=x});
+  if(!un)return false;
+  if(unitLive(un)&&un.sid!==MYSID)return 'busy';
+  curUnit=un.id;stMut(function(s){s.units.forEach(function(x){if(x.id===un.id){x.on=1;x.sid=MYSID;x.ping=Date.now();x.st='';x.sc='';x.stAt=0}})});return true;
+}
+function unitStatus(i){if(!curUnit)return;stMut(function(s){s.units.forEach(function(x){if(x.id===curUnit){x.st=ST[i][0].replace('...','');x.sc=ST[i][1];x.sx=ST[i][2];x.stAt=Date.now();x.ping=Date.now()}})})}
+function unitOff(){if(curUnit)stMut(function(s){s.units.forEach(function(x){if(x.id===curUnit&&(!x.sid||x.sid===MYSID)){x.on=0;x.sid='';x.ping=0;x.st='';x.sc='';x.stAt=0}})});curUnit=null;tasks.length=0;renderTasks();ge('adm').style.display='none'}
+addEventListener('pagehide',function(){if(curUnit)unitOff()});
+function unitBeat(){
+  if(!curUnit)return;
+  var u=stLoad().units.filter(function(x){return x.id===curUnit})[0];
+  if(u&&u.sid&&u.sid!==MYSID){showLogin();lmsg.textContent='Yksikkö '+u.id+' on kirjautunut toiselle laitteelle.';lmsg.style.color='#c00000';return}
+  stMut(function(s){s.units.forEach(function(x){if(x.id===curUnit)x.ping=Date.now()})});
+}
+setInterval(unitBeat,15000);
+// Yksikön puolella: ylläpidon luomat tehtävät tulevat yksikölle automaattisesti
+setInterval(function(){
+  if(!curUnit)return;
+  var s=stLoad(),now=Date.now();
+  s.tasks.forEach(function(t){
+    if(t.at<=now&&t.ul.indexOf(curUnit)>=0&&!tasks.some(function(x){return x.id===t.id})){
+      var c={};for(var k in t)c[k]=t[k];tasks.unshift(c);
+      if(curView!==2)nav.children[1].classList.add('alert');
+    }
+  });
+  tasks=tasks.filter(function(x){return !x.sh||s.tasks.some(function(y){return y.id===x.id})});
+},1000);
+// Ylläpitopaneeli
+var ADT=['new','list','stat','set'],adCur='new';
+ge('nt_code').innerHTML=CODES.map(function(c,i){return '<option value="'+i+'">'+escH(c[0]+' – '+c[1])+'</option>'}).join('');
+function adTab(n){adCur=n;ADT.forEach(function(t){ge('ad_'+t).style.display=t===n?'block':'none';ge('at_'+t).classList.toggle('on',t===n)});adRender(true);if(n==='new')adMapInit()}
+function adOpen(){ge('adm').style.display='flex';adTab('new')}
+ADT.forEach(function(t){ge('at_'+t).onclick=function(){adTab(t)}});
+ge('at_out').onclick=function(){showLogin()};
+['nt_msg','un_msg'].forEach(function(id){var el=ge(id),tm;new MutationObserver(function(){clearTimeout(tm);if(el.textContent)tm=setTimeout(function(){el.textContent=''},4500)}).observe(el,{childList:true,characterData:true,subtree:true})});
+[].forEach.call(document.querySelectorAll('#adm label:not(.ck)'),function(l){var n=l.nextElementSibling;if(n&&n.id&&/^(INPUT|SELECT|TEXTAREA)$/.test(n.tagName))l.htmlFor=n.id});
+ge('nt_sch').onchange=function(){ge('nt_dt').style.display=this.checked?'block':'none'};
+function renderUnits(){var s=stLoad();ge('ad_units').innerHTML=s.units.map(function(u,i){return '<div class="ur"><input value="'+escH(u.id)+'" aria-label="Yksikkötunnus"><button data-a="s" data-i="'+i+'">Tallenna</button><button class="dg" data-a="d" data-i="'+i+'">Poista</button></div>'}).join('')||'<p class="empty">Ei yksiköitä. Lisää ensimmäinen yllä.</p>'}
+function adRender(force){
+  var s=stLoad();
+  if(adCur==='new'&&force){var ck={};[].forEach.call(document.querySelectorAll('#nt_units input:checked'),function(x){ck[x.value]=1});ge('nt_units').innerHTML=s.units.map(function(u){return '<label><input type="checkbox" value="'+escH(u.id)+'"'+(ck[u.id]?' checked':'')+'>'+escH(u.id)+'</label>'}).join('')||'<i>Ei yksiköitä – lisää ne Asetuksissa.</i>'}
+  if(adCur==='list')ge('ad_list').innerHTML='<h2>Tehtävät</h2>'+(s.tasks.length?s.tasks.map(function(t){return '<div class="li"><div><b><span class="tag">'+escH(t.code+' '+t.urg)+'</span>'+escH(t.osoite||'Ei osoitetta')+'</b><small>'+(t.at>Date.now()?'Ajastettu ':'')+fmtT(t.at)+'</small><small>'+escH(t.units)+'</small></div><button class="dg" data-d="'+escH(t.id)+'">Poista</button></div>'}).join(''):'<p class="empty">Ei tehtäviä. Luo uusi tehtävä Uusi tehtävä -välilehdellä.</p>');
+  if(adCur==='stat')ge('ad_stat').innerHTML='<h2>Yksiköiden status</h2>'+(s.units.length?s.units.map(function(u){var d=u.stAt?new Date(u.stAt):null;return '<div class="li"><div><b>'+escH(u.id)+'</b>'+(u.st&&d&&unitLive(u)?'<small>Alkaen '+pad(d.getHours())+':'+pad(d.getMinutes())+'</small>':'')+'</div>'+(u.st&&unitLive(u)?'<span class="st" style="background:'+u.sc+';color:'+(u.sx||'#000')+'">'+escH(u.st)+'</span>':'<span class="st mu">'+(unitLive(u)?'Ei statusta':'Ei kirjautunut')+'</span>')+'</div>'}).join(''):'<p class="empty">Ei yksiköitä. Lisää ne Asetuksissa.</p>');
+  if(adCur==='set'&&force)renderUnits();
+}
+setInterval(function(){if(ge('adm').style.display==='flex')adRender(false)},1000);
+ge('ad_list').onclick=function(e){var b=e.target.closest('button');if(!b||!b.dataset.d)return;stMut(function(s){s.tasks=s.tasks.filter(function(t){return t.id!==b.dataset.d})});adRender(false)};
+ge('ad_units').onclick=function(e){
+  var b=e.target.closest('button');if(!b)return;var i=+b.dataset.i,m=ge('un_msg');
+  if(b.dataset.a==='d'){if(b.dataset.c!=='1'){b.dataset.c='1';b.textContent='Vahvista poisto';return}stMut(function(s){s.units.splice(i,1)});renderUnits();m.textContent='Yksikkö poistettu';return}
+  var v=b.parentNode.querySelector('input').value.trim().toUpperCase(),s0=stLoad();
+  if(!v)return;
+  if(!/^[A-Z0-9_-]+$/.test(v)){m.textContent='Tunnuksessa sallitaan vain kirjaimet A–Z, numerot, - ja _';return}
+  if(s0.units.some(function(u,k){return k!==i&&u.id.toLowerCase()===v.toLowerCase()})){m.textContent='Tunnus on jo käytössä';return}
+  var old=s0.units[i].id;
+  stMut(function(s){s.units[i].id=v;s.tasks.forEach(function(t){t.ul=t.ul.map(function(x){return x===old?v:x});t.units=t.ul.join(', ')})});
+  renderUnits();m.textContent='Tallennettu. Uusi kirjautumistunnus ja salasana: '+v;
+};
+ge('un_add').onclick=function(){
+  var v=gv('un_id').toUpperCase(),m=ge('un_msg');
+  if(!v){m.textContent='Syötä yksikkötunnus';return}
+  if(!/^[A-Z0-9_-]+$/.test(v)){m.textContent='Tunnuksessa sallitaan vain kirjaimet A–Z, numerot, - ja _';return}
+  if(stLoad().units.some(function(u){return u.id.toLowerCase()===v.toLowerCase()})){m.textContent='Yksikkö on jo olemassa';return}
+  stMut(function(s){s.units.push({id:v})});ge('un_id').value='';renderUnits();
+  m.textContent='Yksikkö lisätty. Kirjautumistunnus: '+v+', salasana: '+v;
+};
+ge('nt_go').onclick=function(){
+  var m=ge('nt_msg'),ul=[].map.call(document.querySelectorAll('#nt_units input:checked'),function(x){return x.value});
+  if(!ul.length){m.textContent='Valitse vähintään yksi yksikkö';return}
+  var when=Date.now(),sch=ge('nt_sch').checked;
+  if(sch){var d0=new Date(ge('nt_dt').value).getTime();if(!d0){m.textContent='Valitse ajastuksen pvm ja klo';return}when=Math.max(d0,when)}
+  var dd=new Date(when),c=CODES[ge('nt_code').value];
+  var t={id:when+'_'+Math.random().toString(36).slice(2),at:when,code:c[0],urg:ge('nt_urg').value,time:pad(dd.getHours())+':'+pad(dd.getMinutes()),ul:ul,units:ul.join(', '),kunta:gv('nt_kunta'),osoite:gv('nt_osoite'),risteava:gv('nt_risteava'),kosa:gv('nt_kosa'),info:gv('nt_info'),rakennus:gv('nt_rak'),krit:gv('nt_krit'),ilm:gv('nt_ilm'),kohde:gv('nt_kohde'),soit:gv('nt_soit'),puh:gv('nt_puh'),sh:1};
+  var la=parseFloat(gv('nt_lat').replace(',','.')),lo=parseFloat(gv('nt_lon').replace(',','.'));
+  if(!isNaN(la)&&!isNaN(lo)){t.lat=la;t.lon=lo}
+  stMut(function(s){s.tasks.unshift(t)});
+  ['nt_lat','nt_lon','nt_osoite','nt_risteava','nt_kosa','nt_info','nt_rak','nt_krit','nt_ilm','nt_kohde','nt_soit','nt_puh'].forEach(function(i){ge(i).value=''});
+  [].forEach.call(document.querySelectorAll('#nt_units input'),function(x){x.checked=false});
+  if(adMk){adMap.removeLayer(adMk);adMk=null}
+  m.textContent=sch?'Tehtävä ajastettu '+fmtT(when):'Tehtävä lähetetty yksiköille';
+};
+
+// Tehtävien merkit kartalla (yksikön puoli)
+var tmk={};
+function tIcon(t,sel){return L.divIcon({className:'tmw',html:'<div class="tm'+(sel?' sel':'')+'">'+escH(t.code)+'</div>',iconSize:[40,40],iconAnchor:[20,20]})}
+function syncMarkers(){
+  return;
+  if(typeof map==='undefined'||typeof L==='undefined')return;
+  var live={};
+  tasks.forEach(function(t){
+    if(t.hidden||t.lat==null)return;live[t.id]=1;
+    var sel=t.id===selId,m=tmk[t.id];
+    if(!m){m=tmk[t.id]=L.marker([t.lat,t.lon],{icon:tIcon(t,sel),zIndexOffset:500}).addTo(map);m.on('click',function(){selId=t.id;renderTasks()})}
+    else if(m._sel!==sel)m.setIcon(tIcon(t,sel));
+    m._sel=sel;
+  });
+  for(var id in tmk)if(!live[id]){map.removeLayer(tmk[id]);delete tmk[id]}
+}
+// Sijainnin valinta ylläpidossa
+var adMap=null,adMk=null;
+function setPick(la,lo){
+  ge('nt_lat').value=la.toFixed(5);ge('nt_lon').value=lo.toFixed(5);
+  if(adMk)adMk.setLatLng([la,lo]);else adMk=L.marker([la,lo],{icon:L.divIcon({className:'tmw',html:'<div class="tm">+</div>',iconSize:[40,40],iconAnchor:[20,20]})}).addTo(adMap);
+}
+function adMapInit(){
+  if(typeof L==='undefined'||typeof url==='undefined')return;
+  if(!adMap){
+    adMap=L.map('nt_map',{dragging:!L.Browser.mobile}).setView(HOME,12);
+    L.tileLayer(url,{maxZoom:18,attribution:'© Maanmittauslaitos'}).addTo(adMap);
+    adMap.on('click',function(e){setPick(e.latlng.lat,e.latlng.lng)});
+  }
+  if(L.Browser.mobile)ge('nt_hint').textContent='Napauta karttaa valitaksesi sijainnin. Siirrä karttaa kahdella sormella.';
+  setTimeout(function(){adMap.invalidateSize()},60);
+}
+
+// Kirjautumisnäyttö (harpeke_admin = ylläpito, yksiköt: tunnus = salasana)
+var lg=document.getElementById('login'),lst=document.getElementById('lst'),lu=document.getElementById('lu'),lp=document.getElementById('lp'),lok=document.getElementById('lok'),lmsg=document.getElementById('lmsg'),kbd=document.getElementById('lkbd');
+var LMSG='Aineistoissa voi olla puutteita. Pyri varmistamaan paikkatieto.';
+var act=lu,caps=false,sym=false,kkeys=[];
+function fit(){lst.style.setProperty('--s',Math.min(innerWidth/965,innerHeight/712))}
+fit();addEventListener('resize',fit);
+function upd(){lok.disabled=!(lu._v&&lp._v);lmsg.textContent=LMSG;lmsg.style.color=''}
+function doLogin(){
+  function go(){
+    var r=unitLogin(lu._v,lp._v);
+    if(r===true){lg.style.display='none'}
+    else{setV(lp,'');upd();lmsg.textContent=r==='busy'?'Yksikkö on jo kirjautuneena toisella laitteella.':'Virheellinen käyttäjätunnus tai salasana.';lmsg.style.color='#c00000';act=lp}
+  }
+  var key=lu._v.toUpperCase();
+  if(!DBURL||!/^[A-Z0-9_-]+$/.test(key)){go();return}
+  // haetaan yksikön tuore tila ennen tarkistusta
+  fetch(dbBase()+'units/'+encodeURIComponent(key)+'.json').then(function(r){return r.json()}).then(function(n){
+    if(n&&n.id&&SMEM)SMEM.units.forEach(function(x){if(x.id===n.id)for(var k in n)x[k]=n[k]});
+    go()}).catch(go);
+}
+lu.onfocus=function(){act=lu};lp.onfocus=function(){act=lp};
+function setV(el,v){el._v=v;el.value=new Array(v.length+1).join('*')}
+lu._v='';lp._v='';
+lu.oninput=lp.oninput=function(){this.value=new Array(this._v.length+1).join('*')};
+lu.onkeydown=lp.onkeydown=function(e){
+  if(e.key==='Enter'){if(!lok.disabled)doLogin();e.preventDefault();return}
+  if(e.key==='Tab'||e.ctrlKey||e.metaKey||e.altKey)return;
+  if(e.key==='Backspace'){setV(this,this._v.slice(0,-1));upd();e.preventDefault();return}
+  if(e.key.length===1){setV(this,this._v+e.key);upd()}
+  e.preventDefault();
+};
+lok.onclick=doLogin;
+document.getElementById('lcn').onclick=function(){setV(lu,'');setV(lp,'');act=lu;upd()};
+function toggleKb(){kbd.style.display=kbd.style.display==='none'?'grid':'none'}
+document.getElementById('lkb').onclick=toggleKb;
+var SYM='!"#€%&/()=?'.split('');
+function K(label,col,row,cls,fn){
+  var k=document.createElement('button');k.className='k'+(cls?' '+cls:'');
+  if(label.charAt(0)==='<')k.innerHTML=label;else k.textContent=label;
+  k.style.gridColumn=col;k.style.gridRow=row;
+  k.onmousedown=function(e){e.preventDefault()};
+  k.onclick=fn;kbd.appendChild(k);return k;
+}
+function ins(ch){setV(act,act._v+ch);act.focus();upd()}
+var R=['1234567890+','qwertyuiopå','asdfghjklöä','zxcvbnm,.-'];
+R.forEach(function(s,ri){
+  s.split('').forEach(function(c,ci){
+    var k=K(c,ci+1,ri+1,'',function(){
+      var v=k._c;if(ri===0)v=sym?(k._sy||v):v;else if(sym&&v==='-')v='_';else if(caps)v=v.toUpperCase();
+      ins(v)});
+    k._c=c;k._r=ri;kkeys.push(k);
+    if(ri===0&&ci<10)k._sy=SYM[ci];if(ri===0&&ci===10)k._sy='?';
+  });
+});
+K('<svg width="50" height="34" viewBox="0 0 50 34"><path d="M14 2H46V32H14L3 17Z" fill="none" stroke="#111" stroke-width="3"/><path d="M24 10l14 14M38 10L24 24" stroke="#111" stroke-width="3"/></svg>',12,1,'',function(){setV(act,act._v.slice(0,-1));act.focus();upd()});
+K('<svg width="34" height="34" viewBox="0 0 34 34"><rect x="2" y="2" width="30" height="30" fill="none" stroke="#111" stroke-width="3"/><path d="M10 10l14 14M24 10L10 24" stroke="#111" stroke-width="3"/></svg>',13,1,'',toggleKb);
+K('tab',12,2,'s',function(){act=(act===lu?lp:lu);act.focus()});
+var capsK=K('caps',13,2,'s',function(){caps=!caps;capsK.classList.toggle('on',caps);relabel()});
+K('enter','12','3 / 5','s',function(){if(!lok.disabled)doLogin();else{act=lp;lp.focus()}});
+var symK=K('erik.','13','3 / 5','s',function(){sym=!sym;symK.classList.toggle('on',sym);relabel()});
+K('',11,4,'',function(){});
+function relabel(){kkeys.forEach(function(k){k.textContent=k._r===0?(sym?(k._sy||k._c):k._c):(sym&&k._c==='-'?'_':(caps?k._c.toUpperCase():k._c))})}
+function showLogin(){
+  unitOff();
+  setV(lu,'');setV(lp,'');upd();act=lu;
+  clearStatus();showView(0);
+  lg.style.display='block';kbd.style.display='grid';lu.focus();
+}
+showView(0);
+lu.focus();
+</script>
+</body>
+</html>
