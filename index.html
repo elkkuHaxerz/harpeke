@@ -1068,13 +1068,20 @@ lu.focus();
 // --- Karttatason valinta: paina "Maastokartta" -kenttää ---
 (function(){
   var zoom=document.getElementById('zoom'),info=zoom.querySelector('.info'),zb=document.getElementById('zbase');
-  var LY=[['Maastokartta','maastokartta','png'],['Taustakartta','taustakartta','png'],['Selkokartta','selkokartta','png'],['Ilmakuva','ortokuva','jpg']];
+  var LY=[['Maastokartta','maastokartta','png'],['Taustakartta','taustakartta','png'],['Selkokartta','selkokartta','png'],['Ilmakuva','ortokuva','jpg'],['Kaupunkikartta','osm','png']];
   var pop=document.createElement('div');pop.id='zlay';zoom.appendChild(pop);
   var cur='Maastokartta';
   function paint(){pop.innerHTML='';LY.forEach(function(l){var b=document.createElement('button');b.textContent=l[0];if(l[0]===cur)b.className='on';b.onclick=function(e){e.stopPropagation();pick(l)};pop.appendChild(b)})}
   function pick(l){
     cur=l[0];zb.textContent=l[0];pop.style.display='none';
-    if(typeof hasMap!=='undefined'&&hasMap&&typeof tiles!=='undefined')tiles.setUrl('https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0/'+l[1]+'/default/WGS84_Pseudo-Mercator/{z}/{y}/{x}.'+l[2]+'?api-key='+MML_KEY);
+    if(typeof hasMap!=='undefined'&&hasMap&&typeof tiles!=='undefined'){
+      var osm=l[1]==='osm';
+      tiles.setUrl(osm?'https://tile.openstreetmap.org/{z}/{x}/{y}.png':'https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0/'+l[1]+'/default/WGS84_Pseudo-Mercator/{z}/{y}/{x}.'+l[2]+'?api-key='+MML_KEY);
+      // OpenStreetMapin käyttöehdot vaativat lähdemerkinnän
+      if(!pick.ac)pick.ac=L.control.attribution({prefix:false,position:'bottomright'}).addTo(map);
+      if(osm){pick.ac.addAttribution('© OpenStreetMap-tekijät');pick.ac.getContainer().style.display=''}
+      else{pick.ac.removeAttribution('© OpenStreetMap-tekijät');pick.ac.getContainer().style.display='none'}
+    }
   }
   info.onclick=function(e){e.stopPropagation();if(pop.style.display==='flex'){pop.style.display='none';return}paint();pop.style.display='flex'};
   document.addEventListener('click',function(e){if(pop.style.display==='flex'&&!pop.contains(e.target))pop.style.display='none'});
