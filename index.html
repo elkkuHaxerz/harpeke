@@ -255,6 +255,12 @@ nav button:nth-child(n+5){border-bottom:0}
 .tmw{background:none;border:0}
 .tm{width:40px;height:40px;box-sizing:border-box;border-radius:50%;background:#e02020;color:#fff;border:3px solid #fff;box-shadow:0 0 0 2px #000;font:bold 12px Arial,Helvetica,sans-serif;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .tm.sel{background:#2f3f9f;border-color:#f4ea2e}
+.tri{width:90px;text-align:center;font-family:Arial,Helvetica,sans-serif;cursor:pointer}
+.tri svg{display:block;margin:0 auto}
+.tri.sel svg{filter:drop-shadow(0 0 3px #f4ea2e)}
+.tri b,.tri span{display:block;color:#000;text-shadow:0 0 2px #fff,0 0 2px #fff,0 0 3px #fff;white-space:nowrap}
+.tri b{font:bold 13px/14px Arial,Helvetica,sans-serif;margin-top:1px}
+.tri span{font:bold 12px/13px Arial,Helvetica,sans-serif}
 #msg{position:absolute;top:80px;left:50%;transform:translateX(-50%);background:#fff;color:#000;border:1px solid #000;border-radius:6px;padding:8px 12px;z-index:1000;display:none}
 
 #stg{position:absolute;inset:0;z-index:1150;display:none;flex-direction:column;background:#dde0ec;font-family:Arial,Helvetica,sans-serif;color:#000}
@@ -894,19 +900,50 @@ ge('nt_go').onclick=function(){
   m.textContent=sch?'Tehtävä ajastettu '+fmtT(when):'Tehtävä lähetetty yksiköille';
 };
 
-// Tehtävien merkit kartalla (yksikön puoli)
-var tmk={};
-function tIcon(t,sel){return L.divIcon({className:'tmw',html:'<div class="tm'+(sel?' sel':'')+'">'+escH(t.code)+'</div>',iconSize:[40,40],iconAnchor:[20,20]})}
+// Tehtävien merkit kartalla (yksikön puoli): kolmio, alla tehtäväkoodi ja ensimmäinen yksikkö
+var tmk={},GEO={},geoQ=Promise.resolve();
+var TRC={'KE!':'#e02020','KE':'#1f5fd6','SU':'#9a9a9a','JO':'#c45fc8'};
+function tIcon(t,sel){
+  var c=TRC[stat(t)]||'#e02020';
+  return L.divIcon({className:'tmw',iconSize:[90,64],iconAnchor:[45,15],
+    html:'<div class="tri'+(sel?' sel':'')+'"><svg width="34" height="30" viewBox="0 0 34 30"><polygon points="17,3 31,27 3,27" fill="'+c+'" stroke="#000" stroke-width="3" stroke-linejoin="round"/></svg><b>'+escH(t.code)+'</b><span>'+escH((t.ul&&t.ul[0])||'')+'</span></div>'});
+}
+// Osoite -> koordinaatit (Maanmittauslaitos, varalla OpenStreetMap Nominatim)
+function geoFetch(q){
+  var e=encodeURIComponent(q);
+  return fetch('https://avoin-paikkatieto.maanmittauslaitos.fi/geocoding/v2/pelias/search?text='+e+'&size=1&lang=fi&api-key='+MML_KEY)
+    .then(function(r){return r.json()}).then(function(j){
+      var f=j&&j.features&&j.features[0];if(!f)throw 0;
+      return [f.geometry.coordinates[1],f.geometry.coordinates[0]];
+    }).catch(function(){
+      return fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=fi&q='+e)
+        .then(function(r){return r.json()}).then(function(j){if(!j||!j[0])throw 0;return [parseFloat(j[0].lat),parseFloat(j[0].lon)]});
+    });
+}
+function taskPos(t){
+  if(t.lat!=null&&t.lon!=null)return [t.lat,t.lon];
+  if(!t.osoite)return null;
+  var key=t.id+'|'+t.osoite+'|'+t.kunta,g=GEO[key];
+  if(g===undefined){
+    GEO[key]=0;
+    geoQ=geoQ.then(function(){return geoFetch(t.osoite+', '+(t.kunta||'')).then(function(p){GEO[key]=p},function(){GEO[key]=-1})}).then(function(){return new Promise(function(r){setTimeout(r,1100)})});
+    return null;
+  }
+  return (g&&g!==-1)?g:null;
+}
 function syncMarkers(){
-  return;
   if(typeof map==='undefined'||typeof L==='undefined')return;
   var live={};
   tasks.forEach(function(t){
-    if(t.hidden||t.lat==null)return;live[t.id]=1;
-    var sel=t.id===selId,m=tmk[t.id];
-    if(!m){m=tmk[t.id]=L.marker([t.lat,t.lon],{icon:tIcon(t,sel),zIndexOffset:500}).addTo(map);m.on('click',function(){selId=t.id;renderTasks()})}
-    else if(m._sel!==sel)m.setIcon(tIcon(t,sel));
-    m._sel=sel;
+    if(t.hidden)return;
+    var p=taskPos(t);if(!p)return;
+    live[t.id]=1;
+    var sel=t.id===selId,key=stat(t)+'|'+t.code+'|'+((t.ul&&t.ul[0])||'')+'|'+sel,m=tmk[t.id];
+    if(!m){m=tmk[t.id]=L.marker(p,{icon:tIcon(t,sel),zIndexOffset:500}).addTo(map);m._k=key;m.on('click',function(){selId=t.id;renderTasks()})}
+    else{
+      var ll=m.getLatLng();if(ll.lat!==p[0]||ll.lng!==p[1])m.setLatLng(p);
+      if(m._k!==key){m.setIcon(tIcon(t,sel));m._k=key}
+    }
   });
   for(var id in tmk)if(!live[id]){map.removeLayer(tmk[id]);delete tmk[id]}
 }
