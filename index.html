@@ -309,7 +309,7 @@ nav button:nth-child(n+5){border-bottom:0}
 <div id="msg"></div>
 <div id="status"></div>
 <button id="corner" aria-label="Valikko"></button>
-<div id="mapui"><div id="zoom"><button id="zin">+</button><button id="zout">−</button><div class="info"><div id="zbase">Maastokartta</div><div id="zscale">500 m</div><div class="bar" id="zbar"></div></div><button class="empty"></button></div><div id="sb"><span class="addr" id="addr">HEPORINNE 4-4,3-3 Vantaa</span><span class="chip" style="background:#5fd3d0">VIRVE</span><span class="chip" style="background:#d9dde3">TCP</span><span class="chip" style="background:#f2e84a">GPS</span><span class="chip" style="background:#4d7be0">AST/MIN (WGS84)</span></div></div>
+<div id="mapui"><div id="zoom"><button id="zin">+</button><button id="zout">−</button><div class="info"><div id="zbase">Taustakartta</div><div id="zscale">500 m</div><div class="bar" id="zbar"></div></div><button class="empty"></button></div><div id="sb"><span class="addr" id="addr">HEPORINNE 4-4,3-3 Vantaa</span><span class="chip" style="background:#5fd3d0">VIRVE</span><span class="chip" style="background:#d9dde3">TCP</span><span class="chip" style="background:#f2e84a">GPS</span><span class="chip" style="background:#4d7be0">AST/MIN (WGS84)</span></div></div>
 <div id="sys"><button disabled>Sammuta PC</button><button id="sysq">Lopeta PEKE</button><button id="sysu">Vaihda käyttäjä</button><button>Jatka kirjautumista</button><button>Ohje</button><button id="sysback">PALUU</button><i></i></div>
 <div id="fm"><button>Asetukset</button><button>Tasot</button><button>Seuranta</button><button>Kohteet</button><button>Keskitä<br>omaan</button><button>Keskitys pois</button><button>Näytä<br>vain oma</button><button>Näytä<br>Työpöytä</button><button>Tulosta</button><button id="fmback">PALUU</button><i></i></div>
 <div id="fm4"><button>Kohteet</button><button>Piirtotasot</button><button>Merkkipiste</button><button>Reitti</button><button>Navigointi</button><button>Etsi<br>sijainti</button><button>Osoita<br>koordinaatit</button><button>Koordinaatti-<br>muoto</button><button>Mittaus</button><button>Piirtotyökalut</button><button id="fm4back">PALUU</button><i></i></div>
@@ -413,7 +413,7 @@ function say(t){msg.textContent=t;msg.style.display="block"}
 if(typeof L==="undefined"){say("Leaflet ei latautunut – tarkista verkkoyhteys")}
 else{
   var map=L.map("map",{zoomControl:false,attributionControl:false}).setView(HOME,HOME_Z);
-  var url="https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0/maastokartta/default/WGS84_Pseudo-Mercator/{z}/{y}/{x}.png?api-key="+MML_KEY;
+  var url="https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0/taustakartta/default/WGS84_Pseudo-Mercator/{z}/{y}/{x}.png?api-key="+MML_KEY;
   var tiles=L.tileLayer(url,{maxZoom:18,attribution:"© Maanmittauslaitos"}).addTo(map);
   var errs=0;tiles.on("tileerror",function(){if(++errs===3)say("Karttalaatat eivät lataudu – tarkista API-avain")});
 }
@@ -1070,7 +1070,7 @@ lu.focus();
   var zoom=document.getElementById('zoom'),info=zoom.querySelector('.info'),zb=document.getElementById('zbase');
   var LY=[['Maastokartta','maastokartta','png'],['Taustakartta','taustakartta','png'],['Selkokartta','selkokartta','png'],['Ilmakuva','ortokuva','jpg'],['Kaupunkikartta','osm','png']];
   var pop=document.createElement('div');pop.id='zlay';zoom.appendChild(pop);
-  var cur='Maastokartta';
+  var cur='Taustakartta';
   function paint(){pop.innerHTML='';LY.forEach(function(l){var b=document.createElement('button');b.textContent=l[0];if(l[0]===cur)b.className='on';b.onclick=function(e){e.stopPropagation();pick(l)};pop.appendChild(b)})}
   function pick(l){
     cur=l[0];zb.textContent=l[0];pop.style.display='none';
