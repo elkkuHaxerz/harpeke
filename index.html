@@ -255,12 +255,12 @@ nav button:nth-child(n+5){border-bottom:0}
 .tmw{background:none;border:0}
 .tm{width:40px;height:40px;box-sizing:border-box;border-radius:50%;background:#e02020;color:#fff;border:3px solid #fff;box-shadow:0 0 0 2px #000;font:bold 12px Arial,Helvetica,sans-serif;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .tm.sel{background:#2f3f9f;border-color:#f4ea2e}
-.tri{width:90px;text-align:center;font-family:Arial,Helvetica,sans-serif;cursor:pointer}
+.tri{width:90px;text-align:center;font-family:Arial,Helvetica,sans-serif;pointer-events:none;cursor:default}
 .tri svg{display:block;margin:0 auto}
 .tri.sel svg{filter:drop-shadow(0 0 3px #f4ea2e)}
 .tri b,.tri span{display:block;color:#000;text-shadow:0 0 2px #fff,0 0 2px #fff,0 0 3px #fff;white-space:nowrap}
-.tri b{font:bold 13px/14px Arial,Helvetica,sans-serif;margin-top:1px}
-.tri span{font:bold 12px/13px Arial,Helvetica,sans-serif}
+.tri b{font:bold 11px/12px Arial,Helvetica,sans-serif;margin-top:0}
+.tri span{font:bold 10px/11px Arial,Helvetica,sans-serif}
 #msg{position:absolute;top:80px;left:50%;transform:translateX(-50%);background:#fff;color:#000;border:1px solid #000;border-radius:6px;padding:8px 12px;z-index:1000;display:none}
 
 #stg{position:absolute;inset:0;z-index:1150;display:none;flex-direction:column;background:#dde0ec;font-family:Arial,Helvetica,sans-serif;color:#000}
@@ -905,8 +905,8 @@ var tmk={},GEO={},geoQ=Promise.resolve();
 var TRC={'KE!':'#e02020','KE':'#1f5fd6','SU':'#9a9a9a','JO':'#c45fc8'};
 function tIcon(t,sel){
   var c=TRC[stat(t)]||'#e02020';
-  return L.divIcon({className:'tmw',iconSize:[90,64],iconAnchor:[45,15],
-    html:'<div class="tri'+(sel?' sel':'')+'"><svg width="34" height="30" viewBox="0 0 34 30"><polygon points="17,3 31,27 3,27" fill="'+c+'" stroke="#000" stroke-width="3" stroke-linejoin="round"/></svg><b>'+escH(t.code)+'</b><span>'+escH((t.ul&&t.ul[0])||'')+'</span></div>'});
+  return L.divIcon({className:'tmw',iconSize:[90,46],iconAnchor:[45,17],
+    html:'<div class="tri'+(sel?' sel':'')+'"><svg width="24" height="20" viewBox="0 0 24 20"><polygon points="3,3 21,3 12,17" fill="'+c+'" stroke="#000" stroke-width="2.5" stroke-linejoin="round"/></svg><b>'+escH(t.code)+'</b><span>'+escH((t.ul&&t.ul[0])||'')+'</span></div>'});
 }
 // Osoite -> koordinaatit (Maanmittauslaitos, varalla OpenStreetMap Nominatim)
 function geoFetch(q){
@@ -939,7 +939,7 @@ function syncMarkers(){
     var p=taskPos(t);if(!p)return;
     live[t.id]=1;
     var sel=t.id===selId,key=stat(t)+'|'+t.code+'|'+((t.ul&&t.ul[0])||'')+'|'+sel,m=tmk[t.id];
-    if(!m){m=tmk[t.id]=L.marker(p,{icon:tIcon(t,sel),zIndexOffset:500}).addTo(map);m._k=key;m.on('click',function(){selId=t.id;renderTasks()})}
+    if(!m){m=tmk[t.id]=L.marker(p,{icon:tIcon(t,sel),zIndexOffset:500,interactive:false,keyboard:false}).addTo(map);m._k=key}
     else{
       var ll=m.getLatLng();if(ll.lat!==p[0]||ll.lng!==p[1])m.setLatLng(p);
       if(m._k!==key){m.setIcon(tIcon(t,sel));m._k=key}
