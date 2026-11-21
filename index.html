@@ -300,10 +300,12 @@ nav button:nth-child(n+5){border-bottom:0}
 <div class='card'><h3>Ilmoituksen tiedot</h3><label>Mitä on tapahtunut</label><textarea id='nt_info' rows='3'></textarea><div class='g2'><div><label>Rakennustyyppi</label><input id='nt_rak' list='nt_rakl'><datalist id='nt_rakl'><option>Asuinrakennus</option><option>Liikerakennus</option><option>Teollisuusrakennus</option><option>Oppilaitos</option><option>Hoitolaitos</option><option>Ulkotila</option><option>Muu</option></datalist></div><div><label>Ilmoitinlaite</label><input id='nt_ilm'></div></div><label>Pelastus kiireellisen tehtävän kriteerit</label><input id='nt_krit'><label>Kohdetieto</label><input id='nt_kohde'><div class='g2'><div><label>Soittajan nimi</label><input id='nt_soit'></div><div><label>Puhelinnumero</label><input id='nt_puh' type='tel'></div></div></div>
 <div class='card'><label class='ck'>Ajasta tehtävä<input type='checkbox' id='nt_sch'></label><input type='datetime-local' id='nt_dt' style='display:none;margin-top:12px'></div>
 <div class='fab'><button class='pr' id='nt_go'>Luo tehtävä</button></div><span id='nt_msg' class='snk'></span></section>
-<section id='ad_list'></section><section id='ad_stat'></section>
+<section id='ad_list'><div id='ad_ed'></div><div id='ad_ll'></div></section><section id='ad_stat'></section>
 <section id='ad_set'><h2>Asetukset</h2>
 <div class='card'><h3>Lisää yksikkö</h3><label>Yksikkötunnus</label><input id='un_id' placeholder='esim. RHE62'><p class='hint'>Yksikkötunnus toimii myös kirjautumistunnuksena ja salasanana.</p><button class='pr' id='un_add'>Lisää yksikkö</button><span id='un_msg' class='snk'></span></div>
-<div class='card'><h3>Yksiköt</h3><div id='ad_units'></div></div></section></main></div></div>
+<div class='card'><h3>Yksiköt</h3><div id='ad_units'></div></div>
+<div class='card'><h3>Lisää ylläpitäjä</h3><label>Käyttäjätunnus</label><input id='ad_id' placeholder='esim. matti' autocomplete='off' autocapitalize='off'><label>Salasana</label><input id='ad_pw' type='text' autocomplete='off' autocapitalize='off'><p class='hint'>Ylläpitäjä kirjautuu samalta kirjautumissivulta kuin yksiköt.</p><button class='pr' id='ad_add'>Lisää ylläpitäjä</button><span id='ad_msg' class='snk'></span></div>
+<div class='card'><h3>Ylläpitäjät</h3><div id='ad_admins'></div></div></section></main></div></div>
 <div id="msg"></div>
 <div id="status"></div>
 <button id="corner" aria-label="Valikko"></button>
@@ -581,6 +583,8 @@ function updSel(){
 function renderTasks(){
   rowsEl.innerHTML="";
   tasks.forEach(function(t){
+    // SUOR: tehtävä piiloutuu 5 min kuluttua. Näytä kaikki tuo sen takaisin.
+    if(t.st==='SU'&&t.suAt&&!t.autoHid&&Date.now()-t.suAt>=300000){t.hidden=true;t.autoHid=1;if(t.id===selId)selId=null}
     if(t.hidden)return;
     var r=document.createElement("div");r.className="tr"+(t.id===selId?" sel":"");
     [stat(t),t.code+" "+t.urg,t.time,t.units,t.kunta,t.osoite,t.info].forEach(function(v){var s=document.createElement("span");s.textContent=v;r.appendChild(s)});
@@ -640,7 +644,7 @@ LPB.forEach(function(a){
   if(a[0]==='Reitti')b.onclick=function(){var s=curSel();if(!s)return;var d=s.lat!=null?s.lat+','+s.lon:[s.osoite,s.kunta].join(', ');var l=document.createElement('a');l.href='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(d)+'&travelmode=driving';l.target='_blank';l.rel='noopener';document.body.appendChild(l);l.click();l.remove()};
   if(a[0]==='Sulje')b.onclick=function(){showView(0)};
   var STMAP={'JONO':'JO','KESK':'KE','SUOR':'SU'};
-  if(STMAP[a[0]])b.onclick=function(){var s=curSel();if(s){s.st=STMAP[a[0]];renderTasks()}};
+  if(STMAP[a[0]])b.onclick=function(){var s=curSel();if(s){s.st=STMAP[a[0]];if(s.st==='SU'){s.suAt=Date.now();s.autoHid=0}else{s.suAt=0;s.autoHid=0}renderTasks()}};
   if(a[0]==='Keskitä')b.onclick=function(){var s=curSel();if(s&&s.lat!=null){showView(0);map.setView([s.lat,s.lon],16)}};
   if(a[0]==='Piilota<br>tehtävä')b.onclick=function(){var s=curSel();if(s){s.hidden=true;selId=null;renderTasks()}};
   if(a[0]==='Näytä<br>kaikki')b.onclick=function(){tasks.forEach(function(t){t.hidden=false});renderTasks()};
@@ -708,7 +712,7 @@ var SKEY='harpeke_state_v1',SMEM=null,curUnit=null;
 function ge(i){return document.getElementById(i)}
 function gv(i){return ge(i).value.trim()}
 function escH(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
-function SEED(){return{units:[{id:'RKU341'},{id:'RHE60'},{id:'RHE61'}],tasks:[]}}
+function SEED(){return{units:[{id:'RKU341'},{id:'RHE60'},{id:'RHE61'}],tasks:[],admins:[]}}
 function stLoad(){
   if(DBURL)return SMEM||(SMEM=SEED());
   try{var j=localStorage.getItem(SKEY);if(j)return SMEM=JSON.parse(j)}catch(e){}return SMEM||(SMEM=SEED())
@@ -734,10 +738,10 @@ function dbReq(m,path,body){
 function stSave(s){
   if(DBURL){
     var o=SMEM||SEED();
-    ['units','tasks'].forEach(function(k){
+    ['units','tasks','admins'].forEach(function(k){
       var om={},nm={};
-      o[k].forEach(function(x){om[x.id]=JSON.stringify(x)});
-      s[k].forEach(function(x){nm[x.id]=1;if(om[x.id]!==JSON.stringify(x))dbReq('PUT',k+'/'+encodeURIComponent(x.id),x)});
+      (o[k]||[]).forEach(function(x){om[x.id]=JSON.stringify(x)});
+      (s[k]||[]).forEach(function(x){nm[x.id]=1;if(om[x.id]!==JSON.stringify(x))dbReq('PUT',k+'/'+encodeURIComponent(x.id),x)});
       for(var id in om)if(!nm[id])dbReq('DELETE',k+'/'+encodeURIComponent(id));
     });
     SMEM=s;return;
@@ -750,9 +754,9 @@ function dbPoll(){
     if(d&&d.error){dbFail('virhe: '+d.error+' (tarkista Firebasen säännöt)');return}
     dbOk();
     if(dbPend||Date.now()-dbLast<1500)return;
-    if(d==null){if(!dbSeeded){dbSeeded=1;SMEM={units:[],tasks:[]};stSave(SEED());dbReq('PUT','init',1)}return}
+    if(d==null){if(!dbSeeded){dbSeeded=1;SMEM={units:[],tasks:[],admins:[]};stSave(SEED());dbReq('PUT','init',1)}return}
     var ls=function(o){return Object.keys(o||{}).map(function(k){return o[k]})};
-    SMEM={units:ls(d.units).sort(function(a,b){return tgNat(a.id,b.id)}),tasks:ls(d.tasks).sort(function(a,b){return b.at-a.at})};
+    SMEM={units:ls(d.units).sort(function(a,b){return tgNat(a.id,b.id)}),tasks:ls(d.tasks).sort(function(a,b){return b.at-a.at}),admins:ls(d.admins)};
   }).catch(function(){dbFail('yhteys epäonnistui')});
 }
 setInterval(dbPoll,1000);
@@ -762,6 +766,8 @@ var MYSID=(function(){var k='harpeke_sid';try{var v=sessionStorage.getItem(k);if
 function unitLive(u){return !!u.on&&Date.now()-(u.ping||0)<120000}
 function unitLogin(u,p){
   if(u==='harpeke_admin'&&p==='1234'){adOpen();return true}
+  var adm=(stLoad().admins||[]).filter(function(a){return a.id.toLowerCase()===u.toLowerCase()&&a.pw===p})[0];
+  if(adm){adOpen();return true}
   var l=u.toLowerCase(),un=null;
   stLoad().units.forEach(function(x){if(x.id.toLowerCase()===l&&(p.toLowerCase()===l||(l==='rku341'&&p==='1234')))un=x});
   if(!un)return false;
@@ -795,7 +801,11 @@ setInterval(function(){
     stMut(function(st){st.tasks.forEach(function(t){if(fresh.indexOf(t.id)>=0){t.seen=t.seen||[];if(t.seen.indexOf(me)<0)t.seen.push(me)}})});
     newTaskAlert();
   }
-  tasks=tasks.filter(function(x){return !x.sh||s.tasks.some(function(y){return y.id===x.id})});
+  s.tasks.forEach(function(t){
+    var x=tasks.filter(function(y){return y.id===t.id})[0];
+    if(x&&t.ed&&t.ed!==x.ed){EDF.forEach(function(k){x[k]=t[k]});x.ul=t.ul.slice();x.ed=t.ed}
+  });
+  tasks=tasks.filter(function(x){return !x.sh||s.tasks.some(function(y){return y.id===x.id&&y.ul.indexOf(curUnit)>=0})});
 },1000);
 // Ylläpitopaneeli
 var ADT=['new','list','stat','set'],adCur='new';
@@ -804,19 +814,51 @@ function adTab(n){adCur=n;ADT.forEach(function(t){ge('ad_'+t).style.display=t===
 function adOpen(){ge('adm').style.display='flex';adTab('new')}
 ADT.forEach(function(t){ge('at_'+t).onclick=function(){adTab(t)}});
 ge('at_out').onclick=function(){showLogin()};
-['nt_msg','un_msg'].forEach(function(id){var el=ge(id),tm;new MutationObserver(function(){clearTimeout(tm);if(el.textContent)tm=setTimeout(function(){el.textContent=''},4500)}).observe(el,{childList:true,characterData:true,subtree:true})});
+['nt_msg','un_msg','ad_msg'].forEach(function(id){var el=ge(id),tm;new MutationObserver(function(){clearTimeout(tm);if(el.textContent)tm=setTimeout(function(){el.textContent=''},4500)}).observe(el,{childList:true,characterData:true,subtree:true})});
 [].forEach.call(document.querySelectorAll('#adm label:not(.ck)'),function(l){var n=l.nextElementSibling;if(n&&n.id&&/^(INPUT|SELECT|TEXTAREA)$/.test(n.tagName))l.htmlFor=n.id});
 ge('nt_sch').onchange=function(){ge('nt_dt').style.display=this.checked?'block':'none'};
 function renderUnits(){var s=stLoad();ge('ad_units').innerHTML=s.units.map(function(u,i){return '<div class="ur"><input value="'+escH(u.id)+'" aria-label="Yksikkötunnus"><button data-a="s" data-i="'+i+'">Tallenna</button><button class="dg" data-a="d" data-i="'+i+'">Poista</button></div>'}).join('')||'<p class="empty">Ei yksiköitä. Lisää ensimmäinen yllä.</p>'}
+function renderAdmins(){var s=stLoad();ge('ad_admins').innerHTML='<div class="ur"><input value="harpeke_admin" disabled aria-label="Pääylläpitäjä"><span class="hint" style="margin:0">Pääylläpitäjä</span></div>'+(s.admins||[]).map(function(a,i){return '<div class="ur"><input value="'+escH(a.id)+'" disabled aria-label="Ylläpitäjä"><button class="dg" data-a="d" data-i="'+i+'">Poista</button></div>'}).join('')}
+ge('ad_admins').onclick=function(e){
+  var b=e.target.closest('button');if(!b||b.dataset.a!=='d')return;var i=+b.dataset.i;
+  if(b.dataset.c!=='1'){b.dataset.c='1';b.textContent='Vahvista poisto';return}
+  stMut(function(s){(s.admins||[]).splice(i,1)});renderAdmins();ge('ad_msg').textContent='Ylläpitäjä poistettu';
+};
+ge('ad_add').onclick=function(){
+  var id=gv('ad_id'),pw=ge('ad_pw').value.trim(),m=ge('ad_msg'),s0=stLoad(),l=id.toLowerCase();
+  if(!id||!pw){m.textContent='Syötä tunnus ja salasana';return}
+  if(!/^[A-Za-z0-9_-]+$/.test(id)){m.textContent='Tunnuksessa sallitaan vain kirjaimet A–Z, numerot, - ja _';return}
+  if(pw.length<4){m.textContent='Salasanan pitää olla vähintään 4 merkkiä';return}
+  if(l==='harpeke_admin'||(s0.admins||[]).some(function(a){return a.id.toLowerCase()===l})||s0.units.some(function(u){return u.id.toLowerCase()===l})){m.textContent='Tunnus on jo käytössä';return}
+  stMut(function(s){s.admins=s.admins||[];s.admins.push({id:id,pw:pw})});
+  ge('ad_id').value='';ge('ad_pw').value='';renderAdmins();
+  m.textContent='Ylläpitäjä lisätty. Kirjautumistunnus: '+id;
+};
 function adRender(force){
   var s=stLoad();
   if(adCur==='new'&&force){var ck={};[].forEach.call(document.querySelectorAll('#nt_units input:checked'),function(x){ck[x.value]=1});ge('nt_units').innerHTML=s.units.map(function(u){return '<label><input type="checkbox" value="'+escH(u.id)+'"'+(ck[u.id]?' checked':'')+'>'+escH(u.id)+'</label>'}).join('')||'<i>Ei yksiköitä – lisää ne Asetuksissa.</i>'}
-  if(adCur==='list')ge('ad_list').innerHTML='<h2>Tehtävät</h2>'+(s.tasks.length?s.tasks.map(function(t){return '<div class="li"><div><b><span class="tag">'+escH(t.code+' '+t.urg)+'</span>'+escH(t.osoite||'Ei osoitetta')+'</b><small>'+(t.at>Date.now()?'Ajastettu ':'')+fmtT(t.at)+'</small><small>'+escH(t.units)+'</small></div><button class="dg" data-d="'+escH(t.id)+'">Poista</button></div>'}).join(''):'<p class="empty">Ei tehtäviä. Luo uusi tehtävä Uusi tehtävä -välilehdellä.</p>');
+  if(adCur==='list')ge('ad_ll').innerHTML='<h2>Tehtävät</h2>'+(s.tasks.length?s.tasks.map(function(t){return '<div class="li"><div><b><span class="tag">'+escH(t.code+' '+t.urg)+'</span>'+escH(t.osoite||'Ei osoitetta')+'</b><small>'+(t.at>Date.now()?'Ajastettu ':'')+fmtT(t.at)+'</small><small>'+escH(t.units)+'</small></div><div style="display:flex;gap:8px;flex:none"><button data-e="'+escH(t.id)+'">Muokkaa</button><button class="dg" data-d="'+escH(t.id)+'">Poista</button></div></div>'}).join(''):'<p class="empty">Ei tehtäviä. Luo uusi tehtävä Uusi tehtävä -välilehdellä.</p>');
   if(adCur==='stat')ge('ad_stat').innerHTML='<h2>Yksiköiden status</h2>'+(s.units.length?s.units.map(function(u){var d=u.stAt?new Date(u.stAt):null;return '<div class="li"><div><b>'+escH(u.id)+'</b>'+(u.st&&d&&unitLive(u)?'<small>Alkaen '+pad(d.getHours())+':'+pad(d.getMinutes())+'</small>':'')+'</div>'+(u.st&&unitLive(u)?'<span class="st" style="background:'+u.sc+';color:'+(u.sx||'#000')+'">'+escH(u.st)+'</span>':'<span class="st mu">'+(unitLive(u)?'Ei statusta':'Ei kirjautunut')+'</span>')+'</div>'}).join(''):'<p class="empty">Ei yksiköitä. Lisää ne Asetuksissa.</p>');
-  if(adCur==='set'&&force)renderUnits();
+  if(adCur==='set'&&force){renderUnits();renderAdmins()}
 }
 setInterval(function(){if(ge('adm').style.display==='flex')adRender(false)},1000);
-ge('ad_list').onclick=function(e){var b=e.target.closest('button');if(!b||!b.dataset.d)return;stMut(function(s){s.tasks=s.tasks.filter(function(t){return t.id!==b.dataset.d})});adRender(false)};
+var EDF=['code','urg','ul','units','kunta','kosa','osoite','risteava','info','rakennus','krit','ilm','kohde','soit','puh'];
+function adEditOpen(id){
+  var s=stLoad(),t=s.tasks.filter(function(x){return x.id===id})[0];if(!t)return;
+  var ids=s.units.map(function(u){return u.id});t.ul.forEach(function(x){if(ids.indexOf(x)<0)ids.push(x)});
+  function f(l,k){return '<div><label>'+l+'</label><input data-k="'+k+'" value="'+escH(t[k])+'"></div>'}
+  ge('ad_ed').innerHTML='<div class="card"><h3>Muokkaa tehtävää</h3><div class="g2"><div><label>Tehtäväkoodi</label><select data-k="code">'+CODES.map(function(c){return '<option value="'+escH(c[0])+'"'+(c[0]===t.code?' selected':'')+'>'+escH(c[0]+' – '+c[1])+'</option>'}).join('')+'</select></div><div><label>Kiireellisyys</label><select data-k="urg">'+['A','B','C','D'].map(function(x){return '<option'+(x===t.urg?' selected':'')+'>'+x+'</option>'}).join('')+'</select></div></div><label>Hälytettävät yksiköt</label><div class="cbs" id="ed_units">'+ids.map(function(u){return '<label><input type="checkbox" value="'+escH(u)+'"'+(t.ul.indexOf(u)>=0?' checked':'')+'>'+escH(u)+'</label>'}).join('')+'</div><div class="g2">'+f('Kunta','kunta')+f('Kunnan osa','kosa')+f('Osoite','osoite')+f('Risteävä katu','risteava')+'</div><label>Mitä on tapahtunut</label><textarea data-k="info" rows="3">'+escH(t.info)+'</textarea><div class="g2">'+f('Rakennustyyppi','rakennus')+f('Kriittinen tieto','krit')+f('Ilmoittaja','ilm')+f('Kohde','kohde')+f('Soittaja','soit')+f('Puhelin','puh')+'</div><div style="display:flex;gap:8px;margin-top:14px"><button class="pr" id="ed_save">Tallenna muutokset</button><button id="ed_cancel">Peruuta</button><span id="ed_msg" class="snk"></span></div></div>';
+  ge('ed_cancel').onclick=function(){ge('ad_ed').innerHTML=''};
+  ge('ed_save').onclick=function(){
+    var ul=[].map.call(document.querySelectorAll('#ed_units input:checked'),function(x){return x.value});
+    if(!ul.length){ge('ed_msg').textContent='Valitse vähintään yksi yksikkö';return}
+    var v={};[].forEach.call(document.querySelectorAll('#ad_ed [data-k]'),function(el){v[el.dataset.k]=el.value.trim()});
+    stMut(function(st){st.tasks.forEach(function(x){if(x.id===id){for(var k in v)x[k]=v[k];x.ul=ul;x.units=ul.join(', ');x.ed=Date.now()}})});
+    ge('ad_ed').innerHTML='';adRender(false);ge('nt_msg').textContent='';
+  };
+  ge('ad_ed').scrollIntoView({behavior:'smooth',block:'start'});
+}
+ge('ad_list').onclick=function(e){var b=e.target.closest('button');if(!b)return;if(b.dataset.e){adEditOpen(b.dataset.e);return}if(!b.dataset.d)return;stMut(function(s){s.tasks=s.tasks.filter(function(t){return t.id!==b.dataset.d})});adRender(false)};
 ge('ad_units').onclick=function(e){
   var b=e.target.closest('button');if(!b)return;var i=+b.dataset.i,m=ge('un_msg');
   if(b.dataset.a==='d'){if(b.dataset.c!=='1'){b.dataset.c='1';b.textContent='Vahvista poisto';return}stMut(function(s){s.units.splice(i,1)});renderUnits();m.textContent='Yksikkö poistettu';return}
@@ -832,7 +874,7 @@ ge('un_add').onclick=function(){
   var v=gv('un_id').toUpperCase(),m=ge('un_msg');
   if(!v){m.textContent='Syötä yksikkötunnus';return}
   if(!/^[A-Z0-9_-]+$/.test(v)){m.textContent='Tunnuksessa sallitaan vain kirjaimet A–Z, numerot, - ja _';return}
-  if(stLoad().units.some(function(u){return u.id.toLowerCase()===v.toLowerCase()})){m.textContent='Yksikkö on jo olemassa';return}
+  if(stLoad().units.some(function(u){return u.id.toLowerCase()===v.toLowerCase()})||(stLoad().admins||[]).some(function(a){return a.id.toLowerCase()===v.toLowerCase()})){m.textContent='Tunnus on jo käytössä';return}
   stMut(function(s){s.units.push({id:v})});ge('un_id').value='';renderUnits();
   m.textContent='Yksikkö lisätty. Kirjautumistunnus: '+v+', salasana: '+v;
 };
