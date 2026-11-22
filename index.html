@@ -255,10 +255,11 @@ nav button:nth-child(n+5){border-bottom:0}
 .tmw{background:none;border:0}
 .tm{width:40px;height:40px;box-sizing:border-box;border-radius:50%;background:#e02020;color:#fff;border:3px solid #fff;box-shadow:0 0 0 2px #000;font:bold 12px Arial,Helvetica,sans-serif;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .tm.sel{background:#2f3f9f;border-color:#f4ea2e}
-.tri{width:90px;text-align:center;font-family:Arial,Helvetica,sans-serif;pointer-events:none;cursor:default}
-.tri svg{display:block;margin:0 auto}
+.tri{width:110px;display:flex;align-items:center;gap:3px;text-align:left;font-family:Arial,Helvetica,sans-serif;pointer-events:none;cursor:default}
+.tri svg{display:block;flex:none}
+.tri .tt{display:flex;flex-direction:column}
 .tri.sel svg{filter:drop-shadow(0 0 3px #f4ea2e)}
-.tri b,.tri span{display:block;color:#000;text-shadow:0 0 2px #fff,0 0 2px #fff,0 0 3px #fff;white-space:nowrap}
+.tri b,.tri .tt span{display:block;color:#000;text-shadow:0 0 2px #fff,0 0 2px #fff,0 0 3px #fff;white-space:nowrap}
 .tri b{font:bold 11px/12px Arial,Helvetica,sans-serif;margin-top:0}
 .tri span{font:bold 10px/11px Arial,Helvetica,sans-serif}
 #msg{position:absolute;top:80px;left:50%;transform:translateX(-50%);background:#fff;color:#000;border:1px solid #000;border-radius:6px;padding:8px 12px;z-index:1000;display:none}
@@ -900,11 +901,11 @@ ge('nt_go').onclick=function(){
 
 // Tehtävien merkit kartalla (yksikön puoli): kolmio, alla tehtäväkoodi ja ensimmäinen yksikkö
 var tmk={},GEO={},geoQ=Promise.resolve();
-var TRC={'KE!':'#e02020','KE':'#1f5fd6','SU':'#9a9a9a','JO':'#c45fc8'};
+var TRC={'KE!':'#1f5fd6','KE':'#1f5fd6','SU':'#9a9a9a','JO':'#c45fc8'};
 function tIcon(t,sel){
   var c=TRC[stat(t)]||'#e02020';
-  return L.divIcon({className:'tmw',iconSize:[90,46],iconAnchor:[45,17],
-    html:'<div class="tri'+(sel?' sel':'')+'"><svg width="24" height="20" viewBox="0 0 24 20"><polygon points="3,3 21,3 12,17" fill="'+c+'" stroke="#000" stroke-width="2.5" stroke-linejoin="round"/></svg><b>'+escH(t.code)+'</b><span>'+escH((t.ul&&t.ul[0])||'')+'</span></div>'});
+  return L.divIcon({className:'tmw',iconSize:[110,24],iconAnchor:[12,12],
+    html:'<div class="tri'+(sel?' sel':'')+'"><svg width="24" height="22" viewBox="0 0 24 22"><polygon points="12,3 21,19 3,19" fill="'+c+'" stroke="#000" stroke-width="2.5" stroke-linejoin="round"/></svg><div class="tt"><b>'+escH(t.code)+'</b><span>'+escH((t.ul&&t.ul[0])||'')+'</span></div></div>'});
 }
 // Osoite -> koordinaatit (Maanmittauslaitos, varalla OpenStreetMap Nominatim)
 function geoFetch(q){
@@ -1159,7 +1160,6 @@ lu.focus();
 
   function onPos(pos){
     var c=pos.coords;
-    if(c.accuracy>150)return;
     var ll=L.latLng(c.latitude,c.longitude),t=pos.timestamp,v=0;
     if(c.speed!=null&&!isNaN(c.speed))v=c.speed;
     else if(last&&t>last.t)v=map.distance(last.ll,ll)/((t-last.t)/1000);
@@ -1188,7 +1188,11 @@ lu.focus();
 
   // F1-valikko: "Keskitä omaan" ja "Keskitys pois"
   var fm=document.getElementById('fm');
-  fm.children[4].onclick=function(){follow=true;if(cur)map.setView(cur,map.getZoom(),{animate:false})};
+  fm.children[4].onclick=function(){
+    follow=true;
+    if(cur)map.setView(cur,Math.max(map.getZoom(),15),{animate:false});
+    else{say('Sijaintia ei ole vielä saatu');setTimeout(function(){msg.style.display='none'},3000)}
+  };
   fm.children[5].onclick=function(){follow=false};
 })();
 </script>
